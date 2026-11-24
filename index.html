@@ -1,0 +1,668 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qore-11 Apps Store & DEALS</title>
+    <link rel="preconnect" href="https://www.flipkart.com">
+    <link rel="preconnect" href="https://www.amazon.in">
+    <link rel="dns-prefetch" href="https://docs.google.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-attachment: fixed; background-size: cover; background-position: center; 
+            transition: background-image 0.5s ease-in-out;
+            text-rendering: optimizeSpeed;
+            -webkit-font-smoothing: antialiased;
+        }
+        #mode-container { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); margin: 0 auto; width: 100%; }
+        .mobile-view-active #mode-container {
+            max-width: 400px !important; height: 90vh; margin: 20px auto;
+            border: 12px solid #333; border-radius: 40px; overflow-y: auto;
+            overflow-x: hidden; background: white; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .quran-btn { background: #6a1b9a !important; color: white !important; font-weight: 900; text-transform: uppercase; font-size: 10px !important; border-radius: 9999px !important; }
+        .foryou-btn { background: linear-gradient(135deg, #ec4899, #f43f5e) !important; color: white !important; font-weight: 900; text-transform: uppercase; font-size: 10px !important; border-radius: 9999px !important; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content-quran { background: white; width: 100%; max-width: 380px; padding: 25px; border-radius: 20px; text-align: center; }        
+        #view-switcher { position: fixed; bottom: 25px; right: 25px; z-index: 1000; background: #9333ea; color: white; padding: 12px 24px; border-radius: 50px; font-weight: 900; cursor: pointer; border: 2px solid white; }
+        .fixed-header-wrapper { position: sticky; top: 0; z-index: 100; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .filter-btn { transition: all 0.2s; border: 2px solid #e2e8f0; font-size: 10px !important; font-weight: 900; border-radius: 9999px !important; }
+        .filter-btn.active { background-color: #2563eb !important; color: white !important; transform: scale(1.05); }        
+        .product-card { 
+            min-height: 380px; display: flex; flex-direction: column; justify-content: space-between; padding: 10px !important; 
+            transition: transform 0.2s ease;
+            will-change: transform;
+        }
+        .product-card:hover { transform: translateY(-5px); }
+        .img-box { height: 280px; width: 100%; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 1rem; overflow: hidden; position: relative; }
+        .slide-container { display: flex; transition: transform 0.5s ease-in-out; width: 100%; height: 100%; touch-action: pan-y; }
+        .slide-container img { min-width: 100%; height: 100%; object-fit: contain; padding: 10px; flex-shrink: 0; user-select: none; -webkit-user-drag: none; }        
+        
+        #loader { position: fixed; inset: 0; background: #070b19; z-index: 200000; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        .satellite-system { position: relative; width: 360px; height: 280px; background: radial-gradient(circle at center, rgba(30,41,59,0.6) 0%, transparent 75%); }
+        
+        .main-satellite { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); width: 70px; height: 90px; display: flex; flex-direction: column; align-items: center; animation: floatSat 3.5s ease-in-out infinite alternate; z-index: 10; }
+        .sat-core { width: 34px; height: 50px; background: linear-gradient(135deg, #e2e2e2 0%, #cbd5e1 50%, #94a3b8 100%); border: 2px solid #475569; border-radius: 6px; position: relative; box-shadow: inset -3px -3px 0px rgba(0,0,0,0.15), 0 0 20px rgba(255,255,255,0.1); }
+        .sat-core::before { content: ''; position: absolute; top: 8px; left: 6px; width: 18px; height: 8px; background: #1e293b; border-radius: 2px; border: 1px solid #64748b; }
+        .sat-core::after { content: ''; position: absolute; bottom: 8px; left: 12px; width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
+        
+        .sat-dish-bottom { width: 54px; height: 18px; background: linear-gradient(180deg, #94a3b8 0%, #475569 100%); border: 2px solid #334155; border-radius: 0 0 100px 100px; margin-top: -1px; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .sat-dish-bottom::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 3px; height: 10px; background: #cbd5e1; }
+        .sat-feed-horn { position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); width: 7px; height: 5px; background: #f97316; border-radius: 50%; box-shadow: 0 0 8px #f97316; }
+        
+        .solar-wing-left, .solar-wing-right { position: absolute; top: 12px; width: 65px; height: 26px; background: #0f172a; border: 2px solid #38bdf8; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 2px; box-shadow: 0 0 15px rgba(56,189,248,0.3); }
+        .solar-wing-left { left: -67px; transform: perspective(100px) rotateY(20deg); border-radius: 4px 0 0 4px; }
+        .solar-wing-right { right: -67px; transform: perspective(100px) rotateY(-20deg); border-radius: 0 4px 4px 0; }
+        .solar-wing-left div, .solar-wing-right div { background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); border: 1px solid #60a5fa; border-radius: 1px; }
+
+        .ground-dish-left { position: absolute; bottom: 15px; left: 15px; width: 65px; height: 75px; }
+        .ground-dish-right { position: absolute; bottom: 15px; right: 15px; width: 65px; height: 75px; }
+        
+        .dish-bowl { width: 56px; height: 32px; background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 60%, #475569 100%); border: 2px solid #64748b; border-radius: 50% 50% 100px 100px / 20px 20px 100px 100px; position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 12px rgba(0,0,0,0.4); transform-origin: center bottom; }
+        .ground-dish-left .dish-bowl { transform: rotate(28deg); }
+        .ground-dish-right .dish-bowl { transform: rotate(-28deg); }
+        
+        .dish-bowl::before { content: ''; position: absolute; inset: 2px; border-radius: inherit; border: 1px dashed rgba(255,255,255,0.4); }
+        
+        .dish-receiver-rod { width: 3px; height: 22px; background: linear-gradient(0deg, #475569, #cbd5e1); position: absolute; transform-origin: bottom center; bottom: 14px; }
+        .ground-dish-left .dish-receiver-rod { left: 60%; transform: rotate(-25deg); }
+        .ground-dish-right .dish-receiver-rod { right: 60%; transform: rotate(25deg); }
+        
+        .dish-receiver-rod::after { content: ''; position: absolute; top: -4px; left: -2px; width: 7px; height: 7px; background: #ea580c; border-radius: 50%; box-shadow: 0 0 6px #ea580c; }
+        
+        .dish-stand { width: 24px; height: 26px; background: transparent; border-left: 4px solid #334155; border-right: 4px solid #334155; border-top: 14px solid #475569; margin: -2px auto 0; border-radius: 2px; position: relative; }
+        .dish-stand::after { content: ''; position: absolute; bottom: -4px; left: -8px; width: 32px; height: 4px; background: #1e293b; border-radius: 2px; }
+
+        .wave-line-left, .wave-line-right { position: absolute; top: 100px; height: 110px; width: 90px; border-top: 3px dashed #ea580c; opacity: 0; }
+        .wave-line-left { left: 65px; border-left: 3px dashed #ea580c; border-radius: 100% 0 0 0; animation: transmitLeft 1.5s linear infinite; }
+        .wave-line-right { right: 65px; border-right: 3px dashed #ea580c; border-radius: 0 100% 0 0; animation: transmitRight 1.5s linear infinite; }
+        
+        #terms-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
+        
+        .showroom-scroll-container { display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth; padding: 2px 4px; width: 100%; }
+        .showroom-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .showroom-avatar-wrapper { display: flex; flex-direction: column; align-items: center; cursor: pointer; text-align: center; shrink-0; min-width: 55px; transition: transform 0.2s; }
+        .showroom-avatar-wrapper:hover { transform: scale(1.05); }
+        
+        .showroom-circle-img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid #a855f7; padding: 2px; background: white; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .showroom-avatar-wrapper.active .showroom-circle-img { border-color: #2563eb; transform: scale(1.06); box-shadow: 0 0 8px rgba(37,99,235,0.4); }
+        .showroom-avatar-name { font-size: 9px !important; font-weight: 900; text-transform: uppercase; margin-top: 3px; color: #475569; max-width: 65px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .showroom-avatar-wrapper.active .showroom-avatar-name { color: #2563eb; }
+
+        #unboxingModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 30000; justify-content: center; align-items: center; padding: 15px; }
+        
+        #noticeModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 25000; justify-content: center; align-items: center; padding: 20px; }
+        .bell-bounce { animation: bellRing 2s infinite; }
+        @keyframes bellRing { 0%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(15deg); } 20%, 40% { transform: rotate(-15deg); } 50% { transform: rotate(0); } }
+    </style>
+</head>
+<body id="main-body" class="font-sans text-slate-900 bg-slate-50">
+    <div id="view-switcher" onclick="toggleView()">📱 Switch View</div>    
+    
+    <div id="loader">
+        <div class="satellite-system">
+            <div class="main-satellite">
+                <div class="solar-wing-left"><div></div><div></div><div></div><div></div></div>
+                <div class="sat-core"></div>
+                <div class="solar-wing-right"><div></div><div></div><div></div><div></div></div>
+                <div class="sat-dish-bottom">
+                    <div class="sat-feed-horn"></div>
+                </div>
+            </div>
+            <div class="wave-line-left"></div>
+            <div class="wave-line-right"></div>
+            <div class="ground-dish-left">
+                <div class="dish-bowl">
+                    <div class="dish-receiver-rod"></div>
+                </div>
+                <div class="dish-stand"></div>
+            </div>
+            <div class="ground-dish-right">
+                <div class="dish-bowl">
+                    <div class="dish-receiver-rod"></div>
+                </div>
+                <div class="dish-stand"></div>
+            </div>
+        </div>
+        <p class="text-orange-500 font-black tracking-widest text-[11px] uppercase mt-4 animate-pulse">Syncing Core11 Datalink...</p>
+    </div>
+
+    <div id="unboxingModal" onclick="closeUnboxingModal()">
+        <div class="bg-black p-2 rounded-2xl w-full max-w-2xl relative" onclick="event.stopPropagation()">
+            <button onclick="closeUnboxingModal()" class="absolute -top-10 right-0 text-white font-black text-sm bg-red-600 px-4 py-1.5 rounded-full uppercase">✕ Close Video</button>
+            <div class="w-full aspect-video rounded-xl overflow-hidden">
+                <iframe id="unboxing-iframe" class="w-full h-full" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
+    <div id="noticeModal" class="modal-overlay" onclick="closeNoticeModal()">
+        <div class="bg-white w-full max-w-sm p-5 rounded-2xl text-center border-t-4 border-blue-600 shadow-2xl animate-fade-in" onclick="event.stopPropagation()">
+            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 text-xl shadow-inner">
+                <i class="fas fa-bell"></i>
+            </div>
+            <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide mb-2 italic">Latest Announcements</h3>
+            <div class="w-10 h-0.5 bg-blue-600 mx-auto mb-4 rounded-full"></div>
+            <div id="modal-notice-content" class="text-slate-600 font-bold text-sm bg-slate-50 p-4 rounded-xl border border-slate-100 max-h-60 overflow-y-auto text-left leading-relaxed">
+                Loading updates...
+            </div>
+            <button onclick="closeNoticeModal()" class="mt-5 w-full bg-slate-900 text-white font-black py-3 rounded-xl uppercase text-xs tracking-wider hover:bg-slate-800 transition">✕ Dismiss</button>
+        </div>
+    </div>
+
+    <div id="foryouModal" class="modal-overlay">
+        <div class="modal-content-quran shadow-2xl border-t-8 border-pink-500">
+            <h3 class="text-2xl font-black text-pink-600 italic mb-2 uppercase tracking-wide">✨ For You Store Deal ✨</h3>
+            <div class="w-12 h-1 bg-pink-500 mx-auto mb-4 rounded-full"></div>
+            <p class="text-slate-700 text-sm font-bold mb-4 leading-relaxed">Kya aap bhi apne products ya apni shop ke deals hamare is platform par live add karwana chahte hain?</p>
+            <p class="text-slate-700 text-sm font-bold mb-4 leading-relaxed">Naye logon ke liye sunehra mauka! Apne items live karke zyada customers tak pahunchein. Abhi niche click karent humse contact karein.</p>
+            <p class="text-slate-700 text-sm font-bold mb-4 leading-relaxed">Do you want to list your products or shop deals live on our platform? A golden opportunity for new sellers! Reach more customers by showcasing your items live. Click below to contact us now.</p>
+            <button onclick="sendWhatsAppMessage('Hello Core11, I want to add my products on your store.')" class="w-full bg-[#25D366] text-white font-black py-3.5 rounded-xl flex items-center justify-center gap-2 mb-4 uppercase italic tracking-wider shadow-lg transform hover:scale-105 transition">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20"> Contact Us To Add
+            </button>
+            <button onclick="closeForyouModal()" class="text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600">✕ Close Board</button>
+        </div>
+    </div>
+
+    <div id="quranModal" class="modal-overlay">        
+        <div class="modal-content-quran shadow-2xl">            
+            <h3 class="text-xl font-black text-purple-700 italic mb-4">Sawab-e-Jariya</h3>            
+            <p class="text-slate-600 text-sm mb-6 leading-relaxed">Agar aap apne marhum azizo ko Quran khwani ka sawab pahunchana chahte hain, toh neeche diye gaye button par click karke humein WhatsApp par message karein.</p>            
+            <button onclick="sendWhatsAppMessage('Quran Khwani Inquiry')" class="w-full bg-[#25D366] text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 mb-4 uppercase italic">                
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20"> Send Message            
+            </button>            
+            <button onclick="closeQuranModal()" class="text-slate-400 font-bold text-xs uppercase">Close</button>        
+        </div>    
+    </div>
+    <div id="terms-modal">        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">            <h2 class="text-2xl font-black text-red-600 mb-4 border-b pb-2 uppercase italic text-center">Important Notice</h2>            <div class="space-y-4 text-slate-700 font-medium text-sm leading-relaxed">                <p class="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-500">All product links are from verified platforms like Amazon, Flipkart, and Myntra. Core11 is a directory service; payment and delivery are handled by the respective platforms.</p>                <p>हम आपके लिए सिर्फ Amazon, Flipkart और Myntra जैसे बड़े और भरोसेमंद ब्रांड्स के वेरिफाइड लिंक्स ही लाते हैं। आपकी पूरी खरीदारी सीधे उनकी ऑफिशियल वेबसाइट पर होती है, इसलिए पेमेंट और डिलिवरी की पूरी जिम्मेदारी उन्हीं की होती है। अगर आपको Qualität या पेमेंट से जुड़ी कोई भी परेशानी आती है, तो आप बेझिंधक उनकी सपोर्ट टीम से बात कर सकते हैं—vo आपकी पूरी तरह से मदद करेंगे। By using this store, you agree to our terms of service.</p>            </div>            <button onclick="closeTerms()" class="mt-6 w-full bg-slate-900 text-white font-black py-4 rounded-2xl uppercase italic tracking-widest">I Agree & Continue</button>            </div>    </div>
+    <div id="mode-container">        <div class="fixed-header-wrapper">
+            <header class="bg-white border-b py-1.5 px-3 flex justify-between items-center gap-2">                <div class="flex items-center gap-2">                    <img id="site-logo" src="" alt="Logo" class="h-8 w-auto object-contain">                    <div class="border-l border-slate-200 pl-2">                        <h1 class="text-[15px] md:text-[18px] font-black text-purple-600 italic leading-none">Qore-11 Apps Store & Deal</h1>                        <div class="flex items-center gap-2 mt-0.5">                            <p class="text-[9px] text-blue-600 font-black uppercase tracking-tight">Powered By-M.A. Gohar</p> <p class="text-[9px] text-slate-500 font-bold uppercase tracking-tight md:border-l md:pl-2">Copyright © 2025-2026 Qore11. All Rights Reserved.</p>                               <button onclick="showTerms()" class="text-[9px] text-slate-400 underline hover:text-red-500 font-bold uppercase tracking-tight">Terms & Conditions</button>                        </div>                    </div>                </div>
+                <button onclick="openNoticeModal()" class="relative bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md hover:bg-blue-700 transition shrink-0 bell-bounce">
+                    <i class="fas fa-bell"></i>
+                    <span class="absolute -top-1 -right-1 bg-red-500 w-2.5 h-2.5 rounded-full border border-white"></span>
+                </button>
+            </header>
+            
+            <div class="py-1 px-1.5 bg-slate-50 border-b">                <div class="flex flex-wrap justify-center gap-1">                    <button onclick="filterCategory('all', this)" class="filter-btn px-2.5 py-1 uppercase bg-white shadow-sm flex-grow">All</button>                    <button onclick="filterCategory('apk', this)" class="filter-btn px-2.5 py-1 uppercase bg-white shadow-sm flex-grow">Apps</button>                    <button onclick="filterCategory('men', this)" class="filter-btn px-2.5 py-1 uppercase bg-white shadow-sm flex-grow">Men</button>                    <button onclick="filterCategory('women', this)" class="filter-btn px-2.5 py-1 uppercase bg-white shadow-sm flex-grow">Women</button>                    <button onclick="filterCategory('local', this)" class="filter-btn px-2.5 py-1 uppercase bg-purple-50 text-purple-600 shadow-sm flex-grow">Handicraft Items</button>                    <button onclick="filterCategory('cdr', this)" class="filter-btn px-2.5 py-1 uppercase bg-white shadow-sm flex-grow">CDR File</button>                    <button onclick="openQuranModal()" class="quran-btn px-2.5 py-1 shadow-sm flex-grow">Quran</button>                    <button onclick="openForyouModal()" class="foryou-btn px-2.5 py-1 shadow-sm flex-grow animated pulse infinite">❤️ For You</button>                </div>            </div>
+
+            <div class="py-1 px-2 bg-purple-50 border-b flex items-center gap-2">
+                <span class="text-[9px] font-black uppercase text-purple-700 border-r pr-1.5 shrink-0"><i class="fas fa-store"></i> Shops:</span>
+                <div id="showroom-avatar-container" class="showroom-scroll-container">
+                </div>
+            </div>
+        </div>
+        <main class="max-w-7xl mx-auto p-3 mt-2">            <div class="flex flex-col lg:flex-row gap-6">                <div id="product-list-area" class="lg:w-3/4">                    <div id="product-container" class="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>                    <div id="cdr-section" class="mt-8">                        <h2 class="text-sm font-black text-slate-800 uppercase mb-3 border-l-4 border-purple-600 pl-2 tracking-wide">CDR Files</h2>                        <div id="cdr-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"></div>                    </div>                </div>                <div id="video-sidebar" class="lg:w-1/4 space-y-6">                    <div id="corner-section" class="hidden">                        <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest border-b-2 border-purple-600 pb-1 mb-3">Special Deals</h3>                        <div id="corner-container" class="space-y-4"></div>                    </div>                    <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest border-b-2 border-blue-600 pb-1 mb-3">Product Demos</h3>                    <div id="sidebar-content" class="space-y-4"></div>                </div>            </div>        </main>    </div>
+
+    <script>        
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSdyGaK1NzoilUaClykH8InRTtqZkOBeb256jVL8AEwe8uiko4IRmCR6GyZ3xnWKts6ZLfAkiVGjZVL/pub?output=csv';        
+        const myWhatsApp = "7841806171";        
+        let allItems = [];
+        let showroomVendors = [];
+        let slideInterval;
+
+        window.onload = () => { if(!localStorage.getItem('core11_agreed')) showTerms(); loadStore(); };        
+        function showTerms() { document.getElementById('terms-modal').style.display = 'flex'; }        
+        function closeTerms() { document.getElementById('terms-modal').style.display = 'none'; localStorage.setItem('core11_agreed', 'true'); }        
+        function openQuranModal() { document.getElementById('quranModal').style.display = 'flex'; }        
+        function closeQuranModal() { document.getElementById('quranModal').style.display = 'none'; }        
+        function openForyouModal() { document.getElementById('foryouModal').style.display = 'flex'; }        
+        function closeForyouModal() { document.getElementById('foryouModal').style.display = 'none'; }        
+        function toggleView() { document.getElementById('main-body').classList.toggle('mobile-view-active'); }                
+        function sendWhatsAppMessage(text) { window.open(`https://wa.me/${myWhatsApp}?text=${encodeURIComponent(text)}`, '_blank'); }
+        function sendVendorWhatsApp(number, text) { window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, '_blank'); }
+        function openInstagramProfile(link) { if(link) { window.open(link, '_blank'); } else { alert("Instagram link not available!"); } }
+
+        function openNoticeModal() { document.getElementById('noticeModal').style.display = 'flex'; }
+        function closeNoticeModal() { document.getElementById('noticeModal').style.display = 'none'; }
+
+        function extractYouTubeId(url) {
+            if (!url) return "";
+            let vidId = "";
+            let cleanUrl = url.trim();
+            if (cleanUrl.includes("shorts/")) {
+                vidId = cleanUrl.split("shorts/")[1];
+            } else if (cleanUrl.includes("v=")) {
+                vidId = cleanUrl.split("v=")[1];
+            } else if (cleanUrl.includes("youtu.be/")) {
+                vidId = cleanUrl.split("youtu.be/")[1];
+            } else {
+                vidId = cleanUrl;
+            }
+            if (vidId) vidId = vidId.split(/[?&]/)[0];
+            return vidId;
+        }
+
+        async function loadStore() {            
+            try {                
+                const res = await fetch(sheetUrl);                
+                const csvText = await res.text();                
+                const rows = csvText.split('\n').slice(1).filter(r => r.trim());                
+                allItems = rows.map((row, idx) => {                    
+                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);                    
+                    return {                        
+                        name: cols[0]?.replace(/"/g, '').trim(),                        
+                        desc: cols[1]?.replace(/"/g, '').trim(),                        
+                        images: cols[2]?.replace(/"/g, '').split(',').map(img => img.trim()),                        
+                        link: cols[3]?.replace(/"/g, '').trim(),                        
+                        video: cols[4] ? cols[4].replace(/"/g, '').trim() : null,                        
+                        id: idx                    
+                    };                
+                }).filter(i => i.name);                
+                renderAll();                
+                startAutoSlide();            
+            } catch (e) { console.error("Load Error", e); }        
+        }
+
+        function renderAll() {            
+            const logo = allItems.find(i => i.name.toLowerCase() === 'logo');            
+            if (logo) document.getElementById('site-logo').src = logo.images[0];                        
+            const bg = allItems.find(i => i.name.toLowerCase() === 'background');            
+            if (bg) document.body.style.backgroundImage = `url('${bg.images[0]}')`;
+            const notice = allItems.find(i => i.name.toLowerCase() === 'notice');            
+            if(notice) {
+                document.getElementById('modal-notice-content').textContent = notice.desc;            
+            }
+            
+            buildShowroomAvatars();
+            filterCategory('all', document.querySelector("button[onclick*='all']"));
+            renderCorner(allItems.filter(i => i.name.toLowerCase() === 'corner'));            
+            renderSidebar(allItems);            
+            document.getElementById('loader').style.display = 'none';        
+        }
+
+        function buildShowroomAvatars() {
+            const avatarContainer = document.getElementById('showroom-avatar-container');
+            if(!avatarContainer) return;
+
+            let uniqueVendors = {};
+            
+            allItems.forEach(item => {
+                if(item.name && item.name.startsWith('@')) return;
+
+                if(item.desc && item.desc.includes('#')) {
+                    const match = item.desc.match(/#(\w+(\s+\w+)?)/);
+                    if(match) {
+                        const tag = match[1].trim();
+                        const tagKey = tag.toLowerCase();
+                        
+                        if(!uniqueVendors[tagKey]) {
+                            uniqueVendors[tagKey] = {
+                                name: tag,
+                                img: item.images ? item.images[0] : "",
+                                phone: "", 
+                                insta: ""
+                            };
+                        }
+                    }
+                }
+            });
+
+            allItems.forEach(item => {
+                if(item.name && item.name.startsWith('@')) {
+                    const nameClean = item.name.substring(1).trim();
+                    const nameLower = nameClean.toLowerCase();
+                    if(uniqueVendors[nameLower]) {
+                        if(item.images && item.images[0]) uniqueVendors[nameLower].img = item.images[0];
+                        if(item.link) {
+                            let cleanNum = item.link.replace(/\D/g, '');
+                            uniqueVendors[nameLower].phone = cleanNum || "";
+                        }
+                        if(item.desc && item.desc.toLowerCase().includes("instagram.com")) {
+                            uniqueVendors[nameLower].insta = item.desc.trim();
+                        }
+                    }
+                }
+            });
+
+            const vendorsArray = Object.values(uniqueVendors);
+            showroomVendors = vendorsArray;
+            
+            if(vendorsArray.length === 0) {
+                avatarContainer.parentElement.style.display = 'none';
+                return;
+            }
+
+            avatarContainer.innerHTML = vendorsArray.map(vendor => `
+                <div onclick="filterShowroom('${vendor.name}', '${vendor.phone}', this)" class="showroom-avatar-wrapper select-none shrink-0">
+                    <img src="${vendor.img || 'https://via.placeholder.com/150'}" class="showroom-circle-img" alt="${vendor.name}">
+                    <span class="showroom-avatar-name">${vendor.name}</span>
+                </div>
+            `).join('');
+        }
+        
+        function playUnboxingVideo(videoUrl) {
+            const vidId = extractYouTubeId(videoUrl);
+            if (vidId) {
+                const embedUrl = `https://www.youtube.com/embed/${vidId}?autoplay=1&mute=1&volume=0`;
+                document.getElementById('unboxing-iframe').src = embedUrl;
+                document.getElementById('unboxingModal').style.display = 'flex';
+            }
+        }
+
+        function closeUnboxingModal() {
+            document.getElementById('unboxingModal').style.display = 'none';
+            document.getElementById('unboxing-iframe').src = "";
+        }
+
+        function initTouchSwipe(container) {
+            let startX = 0;
+            let currentIdx = 0;
+            
+            container.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                currentIdx = parseInt(container.getAttribute('data-current-slide') || '0');
+            }, { passive: true });
+
+            container.addEventListener('touchend', (e) => {
+                const endX = e.changedTouches[0].clientX;
+                const diffX = startX - endX;
+                const imgs = container.querySelectorAll('img');
+                if (imgs.length <= 1) return;
+
+                if (Math.abs(diffX) > 50) { 
+                    if (diffX > 0) {
+                        currentIdx = (currentIdx + 1) % imgs.length;
+                    } else {
+                        currentIdx = (currentIdx - 1 + imgs.length) % imgs.length;
+                    }
+                    container.setAttribute('data-current-slide', currentIdx);
+                    container.style.transform = `translateX(-${currentIdx * 100}%)`;
+                }
+            }, { passive: true });
+        }
+
+        function attachSwipeListeners() {
+            setTimeout(() => {
+                document.querySelectorAll('.slide-container').forEach(container => {
+                    if(!container.hasAttribute('data-swipe-bound')) {
+                        container.setAttribute('data-swipe-bound', 'true');
+                        initTouchSwipe(container);
+                    }
+                });
+            }, 50);
+        }
+
+        function renderItems(items) {            
+            const container = document.getElementById('product-container');            
+            container.innerHTML = items.map(item => {                
+                const isLocal = item.desc.includes('`');
+                const isShowroom = item.desc.includes('#');
+                const isAPK = item.link.toLowerCase().endsWith('.apk');                
+                let btnLabel = "View More";                
+                let btnClass = "bg-blue-600";                
+                let btnAction = `href="${item.link}" target="_blank" rel="noreferrer"`;
+
+                let showroomExtraHtml = "";
+                let showMainButton = true; 
+
+                let displayDesc = item.desc;
+
+                if(isShowroom) {
+                    btnLabel = "Order from WhatsApp";
+                    btnClass = "bg-purple-600";
+                    
+                    let matchedVendor = null;
+                    const match = item.desc.match(/#(\w+(\s+\w+)?)/);
+                    let targetPhone = ""; 
+                    
+                    if(match) {
+                        const tag = match[1].trim().toLowerCase();
+                        matchedVendor = showroomVendors.find(v => v.name.toLowerCase() === tag);
+                        if(matchedVendor && matchedVendor.phone && matchedVendor.phone.trim() !== "" && matchedVendor.phone !== "#") {
+                            targetPhone = matchedVendor.phone;
+                        }
+                    }
+                    
+                    displayDesc = displayDesc.replace(/#(\w+(\s+\w+)?)/g, '').replace(/\s+/g, ' ').trim();
+                    
+                    if(!targetPhone) {
+                        showMainButton = false;
+                    } else {
+                        btnAction = `onclick="sendVendorWhatsApp('${targetPhone}', 'Hello, I am interested in ordering: ${item.name}')" style="cursor:pointer"`;
+                    }
+                    
+                    let instaLink = matchedVendor ? matchedVendor.insta : "";
+                    if(instaLink) {
+                        showroomExtraHtml = `
+                        <button onclick="openInstagramProfile('${instaLink}')" class="w-full mt-2 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white font-black py-2.5 rounded-xl uppercase flex items-center justify-center gap-2 text-xs transition transform hover:scale-102 shadow">
+                            <i class="fab fa-instagram text-lg"></i> Visit Instagram
+                        </button>`;
+                    }
+                } else if(isLocal) {                    
+                    btnLabel = "Order on WhatsApp";                    
+                    btnClass = "bg-purple-600";                    
+                    btnAction = `onclick="sendWhatsAppMessage('Interested in: ${item.name}')" style="cursor:pointer"`;                
+                } else if(isAPK) {                    
+                    btnLabel = "Download APK";                    
+                    btnClass = "bg-green-600";                
+                } else if(item.link.toLowerCase().includes('flipkart.com')) {                    
+                    btnLabel = "Buy on Flipkart";                    
+                    btnClass = "bg-amber-500";                
+                } else if(item.link.toLowerCase().includes('amazon.')) {                    
+                    btnLabel = "Buy on Amazon";                    
+                    btnClass = "bg-orange-500";                
+                }
+
+                let videoBtnHtml = "";
+                if (item.video && extractYouTubeId(item.video)) {
+                    videoBtnHtml = `
+                    <button onclick="playUnboxingVideo('${item.video}')" class="absolute bottom-2 right-2 bg-red-600 text-white font-black text-[9px] px-2.5 py-1 rounded-full uppercase flex items-center gap-1 shadow-md z-10 hover:bg-red-700 transition">
+                        <i class="fas fa-play text-[8px]"></i> Unboxing
+                    </button>`;
+                }
+
+                let indicatorTag = "";
+                if (isAPK) {
+                    indicatorTag = '<span class="absolute top-2 left-2 bg-green-600 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider z-10 shadow">APP</span>';
+                } else if (isShowroom) {
+                    indicatorTag = '<span class="absolute top-2 left-2 bg-purple-600 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider z-10 shadow">SHOWROOM</span>';
+                } else if (isLocal) {
+                    indicatorTag = '<span class="absolute top-2 left-2 bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider z-10 shadow">HANDICRAFT</span>';
+                } else {
+                    indicatorTag = '<span class="absolute top-2 left-2 bg-amber-500 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider z-10 shadow">DEAL</span>';
+                }
+
+                let slideHtml = "";
+                if(item.images && item.images.length > 0) {
+                    slideHtml = item.images.map(img => `<img src="${img}" alt="${item.name}" loading="lazy">`).join('');
+                } else {
+                    slideHtml = `<img src="https://via.placeholder.com/400x400?text=No+Image" alt="No Image">`;
+                }
+
+                return `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden product-card">
+                        <div class="img-box relative">
+                            ${indicatorTag}
+                            <div class="slide-container" data-card-id="${item.id}">
+                                ${slideHtml}
+                            </div>
+                            ${videoBtnHtml}
+                        </div>
+                        <div class="mt-2 flex-grow flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-tight line-clamp-1">${item.name}</h3>
+                                <p class="text-[10px] text-slate-500 font-bold mt-0.5 leading-tight whitespace-pre-wrap break-words">${displayDesc}</p>
+                            </div>
+                            <div class="mt-2">
+                                ${showMainButton ? `
+                                <a ${btnAction} class="block w-full ${btnClass} text-white font-black text-center py-2.5 rounded-xl uppercase tracking-wider text-xs shadow-sm hover:opacity-90 transition">
+                                    ${btnLabel}
+                                </a>` : ''}
+                                ${showroomExtraHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            attachSwipeListeners();
+        }
+
+        function renderCDR(items) {            
+            const container = document.getElementById('cdr-container');            
+            if(!container) return;
+            
+            container.innerHTML = items.map(item => {                
+                let btnAction = `onclick="sendWhatsAppMessage('Interested in CDR File: ${item.name}')" style="cursor:pointer"`;
+                let btnLabel = "Order on WhatsApp";
+
+                let videoBtnHtml = "";
+                if (item.video && extractYouTubeId(item.video)) {
+                    videoBtnHtml = `
+                    <button onclick="playUnboxingVideo('${item.video}')" class="absolute bottom-2 right-2 bg-red-600 text-white font-black text-[8px] px-2 py-0.5 rounded-full uppercase flex items-center gap-1 shadow z-10">
+                        <i class="fas fa-play text-[7px]"></i> Preview
+                    </button>`;
+                }
+
+                let slideHtml = (item.images && item.images.length > 0) 
+                    ? item.images.map(img => `<img src="${img}" alt="${item.name}" loading="lazy">`).join('')
+                    : `<img src="https://via.placeholder.com/150" alt="No Image">`;
+
+                return `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden p-2 flex flex-col justify-between min-h-[220px]">
+                        <div class="img-box relative !h-32">
+                            <span class="absolute top-1.5 left-1.5 bg-purple-700 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase z-10">CDR</span>
+                            <div class="slide-container" data-card-id="${item.id}">
+                                ${slideHtml}
+                            </div>
+                            ${videoBtnHtml}
+                        </div>
+                        <div class="mt-1.5 flex-grow flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-[10px] font-black text-slate-800 uppercase line-clamp-1">${item.name}</h4>
+                                <p class="text-[9px] text-slate-400 font-bold line-clamp-2 mt-0.5 leading-tight">${item.desc}</p>
+                            </div>
+                            <button ${btnAction} class="w-full mt-2 bg-[#25D366] text-white font-black text-center py-2 rounded-xl uppercase tracking-wider text-[10px] shadow-sm flex items-center justify-center gap-1">
+                                <i class="fab fa-whatsapp"></i> ${btnLabel}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            attachSwipeListeners();
+        }
+
+        function renderCorner(items) {            
+            const sec = document.getElementById('corner-section');            
+            const container = document.getElementById('corner-container');            
+            if(items.length === 0) { sec.classList.add('hidden'); return; }            
+            sec.classList.remove('hidden');            
+            container.innerHTML = items.map(item => `
+                <div class="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-3 text-white shadow relative overflow-hidden">
+                    <h4 class="font-black uppercase text-xs">${item.desc}</h4>
+                    <a href="${item.link}" target="_blank" rel="noreferrer" class="inline-block mt-2 bg-white text-orange-600 font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">Claim Deal</a>
+                </div>
+            `).join('');        
+        }
+
+        function renderSidebar(items) {            
+            const container = document.getElementById('sidebar-content');            
+            const validVideos = items.filter(i => i.video && extractYouTubeId(i.video));            
+            if(validVideos.length === 0) { container.innerHTML = "<p class='text-xs font-bold text-slate-400 uppercase italic'>No Demos Active</p>"; return; }            
+            container.innerHTML = validVideos.slice(0, 4).map(item => {                
+                const vidId = extractYouTubeId(item.video);                
+                return `
+                    <div onclick="playUnboxingVideo('${item.video}')" class="bg-white p-2 rounded-xl border border-slate-100 shadow-sm flex gap-3 items-center cursor-pointer hover:bg-slate-50 transition">
+                        <div class="w-20 h-14 bg-slate-100 rounded-lg overflow-hidden relative shrink-0 flex items-center justify-center">
+                            <img src="https://img.youtube.com/vi/${vidId}/0.jpg" class="w-full h-full object-cover" alt="Thumb">
+                            <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <div class="w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-[9px] shadow"><i class="fas fa-play ml-0.5"></i></div>
+                            </div>
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 class="text-[10px] font-black text-slate-800 uppercase line-clamp-1 leading-tight">${item.name}</h4>
+                            <p class="text-[9px] text-slate-400 font-bold line-clamp-1 mt-0.5">Watch Live Unboxing Demo</p>
+                        </div>
+                    </div>
+                `;            
+            }).join('');        
+        }
+
+        function filterCategory(cat, btn) {            
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));            
+            if(btn) btn.classList.add('active');            
+            document.querySelectorAll('.showroom-avatar-wrapper').forEach(w => w.classList.remove('active'));
+            
+            const filteredProducts = allItems.filter(i => {                
+                const nameL = i.name.toLowerCase();                
+                if(nameL==='logo' || nameL==='background' || nameL==='notice' || nameL==='corner' || nameL.startsWith('@')) return false;                
+                const isLocal = i.desc.includes('`');                
+                const isShowroom = i.desc.includes('#');                
+                const isCDR = i.desc.toLowerCase().includes('cdr') || i.name.toLowerCase().includes('cdr');
+                const isAPK = i.link.toLowerCase().endsWith('.apk');
+
+                if (cat === 'men' || cat === 'women') {
+                    if (isCDR) return false;
+                    const cleanDesc = i.desc ? i.desc.trim() : "";
+                    if (cat === 'men') {
+                        return cleanDesc.endsWith('.');
+                    }
+                    if (cat === 'women') {
+                        return cleanDesc.endsWith(',');
+                    }
+                }
+
+                if(cat === 'all') return !isCDR;                
+                if(cat === 'apk') return isAPK && !isCDR;                
+                if(cat === 'local') return isLocal && !isCDR;                
+                if(cat === 'showroom') return isShowroom && !isCDR;                
+                if(cat === 'cdr') return false;                
+                return i.desc.toLowerCase().includes(cat) && !isCDR;            
+            });            
+            renderItems(filteredProducts);
+
+            const filteredCDR = allItems.filter(i => {
+                const nameL = i.name.toLowerCase();
+                if(nameL==='logo' || nameL==='background' || nameL==='notice' || nameL==='corner' || nameL.startsWith('@')) return false;
+                const isCDR = i.desc.toLowerCase().includes('cdr') || i.name.toLowerCase().includes('cdr');
+                if(cat === 'all' || cat === 'cdr') return isCDR;
+                return false;
+            });
+            
+            const cdrSection = document.getElementById('cdr-section');
+            if(filteredCDR.length > 0) {
+                if(cdrSection) cdrSection.style.display = 'block';
+                renderCDR(filteredCDR);
+            } else {
+                if(cdrSection) cdrSection.style.display = 'none';
+            }
+        }
+
+        function filterShowroom(vendorName, vendorPhone, avatarEl) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.showroom-avatar-wrapper').forEach(w => w.classList.remove('active'));
+            if(avatarEl) avatarEl.classList.add('active');
+
+            const tagToSearch = `#${vendorName.toLowerCase()}`;
+            const matchedProducts = allItems.filter(item => {
+                const nameL = item.name.toLowerCase();
+                if(nameL==='logo' || nameL==='background' || nameL==='notice' || nameL==='corner' || nameL.startsWith('@')) return false;
+                return item.desc && item.desc.toLowerCase().includes(tagToSearch);
+            });
+
+            renderItems(matchedProducts);
+            
+            const cdrSection = document.getElementById('cdr-section');
+            if(cdrSection) cdrSection.style.display = 'none';
+        }
+
+        function startAutoSlide() {            
+            if(slideInterval) clearInterval(slideInterval);            
+            slideInterval = setInterval(() => {                
+                document.querySelectorAll('.slide-container').forEach(container => {                    
+                    const imgs = container.querySelectorAll('img');                    
+                    if(imgs.length <= 1) return;                    
+                    let currentIdx = parseInt(container.getAttribute('data-current-slide') || '0');                    
+                    currentIdx = (currentIdx + 1) % imgs.length;                    
+                    container.setAttribute('data-current-slide', currentIdx);                    
+                    container.style.transform = `translateX(-${currentIdx * 100}%)`;                
+                });            
+            }, 3000);        
+        }
+    </script>
+</body>
+</html>
