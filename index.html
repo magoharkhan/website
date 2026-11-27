@@ -1,92 +1,2046 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Turbo Road Racer</title>
-<style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#09131b;color:#fff;font-family:Arial,sans-serif;touch-action:none}
-body{display:grid;place-items:center}.game{width:min(100vw,520px);height:min(100dvh,900px);min-height:450px;background:#101c27;border:5px solid #33495b;border-radius:20px;padding:8px;display:flex;flex-direction:column;box-shadow:0 15px 50px #0009}
-.header{height:36px;flex:0 0 36px;display:flex;align-items:center;justify-content:space-between;padding:0 6px;font-size:13px;font-weight:900;letter-spacing:1px;color:#b8d1df}
-.header span:first-child{color:#ffe36b}.screen{position:relative;flex:1;min-height:0;overflow:hidden;border:3px solid #dce8f1;border-radius:5px;background:#477d40}
-canvas{width:100%;height:100%;display:block}
-.hud{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;align-items:flex-start;pointer-events:none}
-.stat{background:#07121bdc;border:1px solid #91a5ae;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:bold;min-width:64px;text-align:center}.stat b{display:block;color:#ffe36b;font-size:15px;margin-top:2px}
-.sound{pointer-events:auto;margin-left:auto;border:1px solid #d9e2e8;border-radius:7px;background:#122b3b;color:#fff;font-weight:bold;padding:7px 9px;font-size:12px}
-.overlay{position:absolute;inset:0;background:#06121bdc;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px}
-.panel{width:min(100%,350px);background:#132b38;border:2px solid #7796a3;border-radius:16px;padding:22px;box-shadow:0 12px 30px #0008}
-h1{font-size:clamp(26px,7vw,40px);margin:0 0 8px;color:#ffe36b;text-shadow:2px 3px #9d4b24}
-p{font-size:14px;line-height:1.5;color:#e3edf1;margin:8px 0 16px}
-button{border:0;border-radius:9px;background:#ffdc50;color:#1c2630;font-size:16px;font-weight:900;padding:12px 20px}
-.controls{height:82px;flex:0 0 82px;display:flex;align-items:center;justify-content:space-around;gap:10px;padding-top:7px}
-.controls button{height:62px;width:30%;border-radius:13px;background:#263d50;color:#fff;border:1px solid #6e8b9d;font-size:25px;touch-action:none}
-.controls button:active{background:#41647a;transform:translateY(2px)}
-.note{height:15px;flex:0 0 15px;text-align:center;font-size:10px;color:#91a5b4}
-@media(max-height:550px){.game{height:98dvh;min-height:0}.header{height:24px;flex-basis:24px}.controls{height:58px;flex-basis:58px}.controls button{height:45px}.note{display:none}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProStock Seasonality & Historical Research Terminal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        terminal: {
+                            bg: '#0a0e17',
+                            card: '#111827',
+                            header: '#1f2937',
+                            border: '#1f293d',
+                            accent: '#3b82f6'
+                        },
+                        bull: {
+                            DEFAULT: '#10b981',
+                            light: 'rgba(16, 185, 129, 0.15)',
+                            text: '#34d399'
+                        },
+                        bear: {
+                            DEFAULT: '#f43f5e',
+                            light: 'rgba(244, 63, 94, 0.15)',
+                            text: '#fb7185'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        // Restore saved theme before the page renders to avoid a flash.
+        (function () {
+            const savedTheme = localStorage.getItem('prostock_theme') || 'dark';
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        })();
+    </script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #060911;
+            color: #e2e8f0;
+        }
+        .font-mono-num {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0e17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        /* Light theme overrides: leave the original dark styling untouched. */
+        html:not(.dark) body {
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
+        }
+        html:not(.dark) .bg-terminal-card,
+        html:not(.dark) .bg-slate-900,
+        html:not(.dark) .bg-slate-900\/90,
+        html:not(.dark) .bg-slate-900\/60,
+        html:not(.dark) .bg-slate-800,
+        html:not(.dark) .bg-slate-800\/60,
+        html:not(.dark) .bg-slate-800\/40,
+        html:not(.dark) .bg-slate-950,
+        html:not(.dark) .bg-slate-950\/60,
+        html:not(.dark) .bg-slate-950\/50 {
+            background-color: #ffffff !important;
+        }
+        html:not(.dark) .bg-slate-700,
+        html:not(.dark) .hover\:bg-slate-700:hover,
+        html:not(.dark) .hover\:bg-slate-800:hover {
+            background-color: #e2e8f0 !important;
+        }
+        html:not(.dark) .text-slate-100,
+        html:not(.dark) .text-slate-200,
+        html:not(.dark) .text-slate-300 {
+            color: #1e293b !important;
+        }
+        html:not(.dark) .text-slate-400,
+        html:not(.dark) .text-slate-500 {
+            color: #64748b !important;
+        }
+        html:not(.dark) .border-slate-800,
+        html:not(.dark) .border-slate-800\/80,
+        html:not(.dark) .border-slate-800\/90,
+        html:not(.dark) .border-slate-700,
+        html:not(.dark) .border-slate-700\/70,
+        html:not(.dark) .border-slate-700\/50,
+        html:not(.dark) .border-slate-800\/70,
+        html:not(.dark) .border-slate-800\/40,
+        html:not(.dark) .border-terminal-border {
+            border-color: #cbd5e1 !important;
+        }
+        html:not(.dark) input,
+        html:not(.dark) select,
+        html:not(.dark) textarea {
+            background-color: #f8fafc !important;
+            color: #1e293b !important;
+            border-color: #cbd5e1 !important;
+        }
+        html:not(.dark) input::placeholder,
+        html:not(.dark) textarea::placeholder {
+            color: #94a3b8 !important;
+        }
+        html:not(.dark) .bg-slate-950\/50 {
+            background-color: #f8fafc !important;
+        }
+        html:not(.dark) table thead,
+        html:not(.dark) table tbody {
+            background-color: #ffffff !important;
+        }
+        html:not(.dark) .hover\:bg-slate-800\/40:hover {
+            background-color: #f1f5f9 !important;
+        }
+        html:not(.dark) .theme-toggle {
+            background: #fef3c7;
+            color: #92400e;
+            border-color: #fcd34d;
+        }
+        /* Responsive layout refinements for phones, tablets and laptops. */
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+        body { min-width: 320px; }
+        button, input, select, textarea { max-width: 100%; }
+        img, canvas { max-width: 100%; }
+        @media (max-width: 767px) {
+            header { position: relative !important; padding-left: 10px !important; padding-right: 10px !important; }
+            header > div { align-items: flex-start !important; }
+            header h1 { flex-wrap: wrap; line-height: 1.45; }
+            header .flex.items-center.flex-wrap.gap-2 { width: 100%; }
+            main { padding: 10px !important; gap: 12px !important; }
+            main > .grid { gap: 12px !important; }
+            main .rounded-lg { min-width: 0; }
+            main .lg\:col-span-8, main .lg\:col-span-4 { grid-column: 1 / -1; }
+            /* Tab buttons wrap and remain reachable without forcing page-wide scrolling. */
+            #tabContentChart, #tabContentGrid, #tabContentMatrix, #tabContentInvestments,
+            #tabContentCompanyList, #tabContentAnalyzer, #tabContentCalculator, #tabContentForecast { min-width: 0; }
+            #tabBtnChart, #tabBtnGrid, #tabBtnMatrix, #tabBtnInvestments,
+            #tabBtnCompanyList, #tabBtnAnalyzer, #tabBtnCalculator, #tabBtnForecast { white-space: nowrap; flex: 0 0 auto; }
+            #tabBtnChart, #tabBtnGrid, #tabBtnMatrix, #tabBtnInvestments,
+            #tabBtnCompanyList, #tabBtnAnalyzer, #tabBtnCalculator, #tabBtnForecast { padding: 8px 9px !important; font-size: 11px !important; }
+            #tabContentCompanyList form, #tabContentInvestments form { min-width: 0; }
+            #companyMemoryList { grid-template-columns: minmax(0, 1fr) !important; }
+            .overflow-x-auto { max-width: 100%; }
+            canvas { max-height: 320px; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+            main { padding: 14px !important; }
+            #companyMemoryList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+    </style>
 </head>
-<body>
-<div class="game">
- <div class="header"><span>🏁 TURBO ROAD RACER</span><span>ARCADE EDITION</span></div>
- <div class="screen">
-  <canvas id="c"></canvas>
-  <div class="hud">
-   <div class="stat">SCORE<b id="score">0</b></div>
-   <div class="stat">LEVEL<b id="level">1</b></div>
-   <div class="stat">LIVES<b id="lives">♥ ♥ ♥</b></div>
-   <button class="sound" id="sound">🔊 SOUND ON</button>
-  </div>
-  <div class="overlay" id="start"><div class="panel"><h1>TURBO RACER</h1><p>Race through traffic, dodge other cars and beat your high score!<br><br><b>Move:</b> ◀ ▶ or A / D<br><b>Mobile:</b> use the buttons below</p><button id="play">START RACE</button></div></div>
-  <div class="overlay" id="over" style="display:none"><div class="panel"><h1>RACE OVER!</h1><p>Your score: <b id="final">0</b></p><button id="again">RACE AGAIN</button></div></div>
- </div>
- <div class="controls">
-  <button id="left" aria-label="Left">◀</button>
-  <button id="pause" aria-label="Pause">Ⅱ</button>
-  <button id="right" aria-label="Right">▶</button>
- </div>
- <div class="note">KEYBOARD: ← → / A D &nbsp; • &nbsp; SPACE: PAUSE</div>
-</div>
-<script>
-(()=>{
-const c=document.getElementById('c'),ctx=c.getContext('2d'),$=id=>document.getElementById(id);
-let W=0,H=0,dpr=1,active=false,paused=false,last=0,score=0,lives=3,level=1,playerLane=1,traffic=[],roadScroll=0,spawn=0,soundOn=true,audio=null;
-const lanes=4,carColors=['#ed5142','#f0b82f','#36a7e5','#a66add','#eeeeee','#36bd78'];
-let player={x:0,y:0,w:0,h:0};
-function resize(){let r=c.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);c.width=Math.round(r.width*dpr);c.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);W=r.width;H=r.height;player.w=Math.min(W*.105,39);player.h=player.w*1.62;player.y=H-player.h-17;player.x=laneX(playerLane)-player.w/2;}
-function road(){return{x:W*.09,w:W*.82}}function laneX(n){let r=road();return r.x+r.w*(n+.5)/lanes}
-function audioReady(){if(!soundOn)return null;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();return audio}catch(e){return null}}
-function beep(freq=440,dur=.08,type='square',vol=.035){let a=audioReady();if(!a)return;let o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(freq,a.currentTime);g.gain.setValueAtTime(vol,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+dur);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+dur)}
-function crashSound(){beep(115,.22,'sawtooth',.08);setTimeout(()=>beep(70,.18,'triangle',.05),70)}
-function drawCar(x,y,w,h,color,isPlayer=false){
- ctx.fillStyle='#101820';ctx.beginPath();ctx.roundRect(x-w*.48,y+h*.12,w*.96,h*.8,5);ctx.fill();
- ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x-w*.45,y+h*.12,w*.9,h*.78,5);ctx.fill();
- ctx.fillStyle=isPlayer?'#a6f0ff':'#b8d0dc';ctx.beginPath();ctx.roundRect(x-w*.32,y+h*.17,w*.64,h*.22,4);ctx.fill();
- ctx.fillStyle='#263f52';ctx.fillRect(x-w*.34,y+h*.5,w*.68,h*.17);
- ctx.fillStyle='#ffeaa0';ctx.fillRect(x-w*.4,y+h*.79,w*.22,h*.07);ctx.fillRect(x+w*.18,y+h*.79,w*.22,h*.07);
- ctx.fillStyle='#101820';ctx.fillRect(x-w*.52,y+h*.27,w*.12,h*.2);ctx.fillRect(x+w*.4,y+h*.27,w*.12,h*.2);
- if(isPlayer){ctx.fillStyle='#fff16a';ctx.fillRect(x-w*.1,y+h*.43,w*.2,h*.08)}
-}
-function drawRoad(){let r=road();ctx.fillStyle='#39bf4c';ctx.fillRect(0,0,W,H);ctx.fillStyle='#536987';ctx.fillRect(r.x,0,r.w,H);
- ctx.fillStyle='#617b9f';ctx.fillRect(r.x+3,0,r.w-6,H);ctx.fillStyle='#e8edf1';ctx.fillRect(r.x+2,0,4,H);ctx.fillRect(r.x+r.w-6,0,4,H);
- ctx.strokeStyle='#e6ebef';ctx.lineWidth=Math.max(3,W*.012);ctx.setLineDash([H*.04,H*.035]);ctx.lineDashOffset=-roadScroll;
- for(let i=1;i<lanes;i++){let x=r.x+r.w*i/lanes;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}ctx.setLineDash([]);
-}
-function update(dt){let speed=(210+level*27)*dt;roadScroll=(roadScroll+speed)%(H*.075);spawn-=dt;if(spawn<=0){let lane=Math.floor(Math.random()*lanes),w=player.w*.92,h=player.h*.95;traffic.push({lane,x:laneX(lane)-w/2,y:-h-8,w,h,color:carColors[Math.floor(Math.random()*carColors.length)],speed:1});spawn=Math.max(.42,1.05-level*.07)*(0.75+Math.random()*.5)}
- let target=laneX(playerLane)-player.w/2;player.x+=(target-player.x)*Math.min(1,dt*22);
- traffic.forEach(e=>e.y+=(175+level*24)*dt);traffic=traffic.filter(e=>e.y<H+e.h);
- for(let i=traffic.length-1;i>=0;i--){let e=traffic[i];if(e.y+e.h>player.y+8&&e.y<player.y+player.h-5&&Math.abs((e.x+e.w/2)-(player.x+player.w/2))<player.w*.72){traffic.splice(i,1);lives--;crashSound();$('lives').textContent='♥ '.repeat(lives).trim()||'0';if(lives<=0){end();return}}}
- score+=dt*14;level=1+Math.floor(score/180);$('score').textContent=Math.floor(score);$('level').textContent=level;
-}
-function draw(){ctx.clearRect(0,0,W,H);drawRoad();traffic.forEach(e=>drawCar(e.x+e.w/2,e.y,e.w,e.h,e.color));drawCar(player.x+player.w/2,player.y,player.w,player.h,'#17b978',true)}
-function loop(t){if(!active)return;let dt=Math.min((t-last)/1000||0,.04);last=t;if(!paused)update(dt);draw();if(active)requestAnimationFrame(loop)}
-function start(){audioReady();score=0;lives=3;level=1;playerLane=1;traffic=[];spawn=.4;roadScroll=0;paused=false;active=true;$('lives').textContent='♥ ♥ ♥';$('score').textContent='0';$('level').textContent='1';$('start').style.display='none';$('over').style.display='none';$('pause').textContent='Ⅱ';last=performance.now();beep(660,.12,'square',.04);requestAnimationFrame(loop)}
-function end(){active=false;$('final').textContent=Math.floor(score);$('over').style.display='flex';beep(180,.3,'sawtooth',.06)}
-function move(d){if(active&&!paused){playerLane=Math.max(0,Math.min(lanes-1,playerLane+d));beep(300,.035,'square',.015)}}
-function togglePause(){if(!active)return;paused=!paused;$('pause').textContent=paused?'▶':'Ⅱ';if(!paused){last=performance.now();requestAnimationFrame(loop)}else{draw();ctx.fillStyle='#06111b99';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.font='bold 28px Arial';ctx.textAlign='center';ctx.fillText('PAUSED',W/2,H/2)}}
-$('play').onclick=start;$('again').onclick=start;$('left').onpointerdown=e=>{e.preventDefault();move(-1)};$('right').onpointerdown=e=>{e.preventDefault();move(1)};$('pause').onclick=togglePause;
-$('sound').onclick=()=>{soundOn=!soundOn;$('sound').textContent=soundOn?'🔊 SOUND ON':'🔇 SOUND OFF';if(soundOn){audioReady();beep(520,.08)}};
-window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight',' ','a','d','A','D'].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')move(-1);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')move(1);if(e.key===' ')togglePause()});
-window.addEventListener('resize',resize);resize();draw();
-})();
-</script>
-</body></html>
+<body class="min-h-screen flex flex-col text-xs sm:text-sm antialiased">
+
+    <!-- Top Terminal Navbar -->
+    <header class="bg-terminal-card border-b border-terminal-border sticky top-0 z-50 px-4 py-2.5">
+        <div class="max-w-[1700px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Title -->
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-terminal text-slate-950 font-bold text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm sm:text-base font-bold text-slate-100 tracking-wide flex items-center gap-2">
+                        StockTrend IQ (Powered By M.A.Gohar) <span class="text-xs font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">SEASONALITY TERMINAL V 2.2</span>
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Terminal Actions & Filters -->
+            <div class="flex items-center flex-wrap gap-2">
+                <!-- Light / Dark Theme Switch -->
+                <button id="themeToggle" type="button" onclick="toggleTheme()" aria-label="Switch to light mode"
+                    title="Switch Light / Dark Mode"
+                    class="theme-toggle px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs font-medium transition-all flex items-center gap-1.5">
+                    <i id="themeToggleIcon" class="fa-solid fa-sun"></i>
+                    <span id="themeToggleLabel">Light Mode</span>
+                </button>
+
+                <!-- Sound effects toggle -->
+                <button id="soundToggle" type="button" onclick="toggleTerminalSound()" aria-pressed="true" title="Turn terminal sound effects on/off (two-note tin-tin chime)"
+                    class="px-2.5 py-1 bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-700/50 text-indigo-200 rounded text-xs font-medium transition-all flex items-center gap-1.5">
+                    <i id="soundToggleIcon" class="fa-solid fa-volume-high"></i><span id="soundToggleLabel">Sound ON</span>
+                </button>
+                <!-- Stock Ticker Quick Select -->
+                <div class="flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/70 rounded px-2.5 py-1">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i>
+                    <select id="indexFilter" onchange="filterData()" class="bg-transparent text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer pr-2">
+                        <option value="ALL" class="bg-slate-900">All Tickers (Combined Matrix)</option>
+                    </select>
+                </div>
+
+                <!-- Export CSV -->
+                <button onclick="exportToCSV()" title="Export Table to CSV" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs font-medium transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-csv text-emerald-400"></i> Export CSV
+                </button>
+
+                <!-- Import / Export JSON Backup -->
+                <button onclick="exportJSONBackup()" title="Download Backup JSON" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-xs font-medium transition-all flex items-center gap-1">
+                    <i class="fa-solid fa-download text-blue-400"></i> Backup
+                </button>
+
+                <!-- Restore JSON Backup -->
+                <button onclick="document.getElementById('jsonRestoreInput').click()" title="Restore research records from a JSON backup" class="px-2.5 py-1 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/50 text-emerald-300 rounded text-xs font-medium transition-all flex items-center gap-1">
+                    <i class="fa-solid fa-upload"></i> Restore
+                </button>
+                <input id="jsonRestoreInput" type="file" accept=".json,application/json" class="hidden" onchange="restoreJSONBackup(event)">
+
+                <!-- Reset Data -->
+                <button onclick="resetDefaultData()" title="Reset to Pre-loaded Bluechip Data" class="px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 rounded text-xs font-medium transition-all flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right"></i> Reset
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="max-w-[1700px] w-full mx-auto p-3 sm:p-5 flex-1 flex flex-col gap-4">
+
+        <!-- Stat Ticker Strip -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded p-3 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Best Seasonality Month</span>
+                    <div class="flex items-baseline gap-1.5 mt-0.5">
+                        <span id="kpiBestMonth" class="text-base font-bold text-emerald-400">-</span>
+                        <span id="kpiBestReturn" class="text-xs text-emerald-400 font-mono-num font-semibold">+0%</span>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded p-3 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Weakest Seasonality Month</span>
+                    <div class="flex items-baseline gap-1.5 mt-0.5">
+                        <span id="kpiWorstMonth" class="text-base font-bold text-rose-400">-</span>
+                        <span id="kpiWorstReturn" class="text-xs text-rose-400 font-mono-num font-semibold">0%</span>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded p-3 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Average Historical Win Rate</span>
+                    <div class="flex items-baseline gap-1.5 mt-0.5">
+                        <span id="kpiWinRate" class="text-base font-bold text-blue-400 font-mono-num">0%</span>
+                        <span id="kpiRatio" class="text-[11px] text-slate-400">(0 / 12)</span>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/90 border border-slate-800/80 rounded p-3 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">Top Performing Quarter</span>
+                    <div class="flex items-baseline gap-1.5 mt-0.5">
+                        <span id="kpiBestQuarter" class="text-base font-bold text-purple-400">-</span>
+                        <span id="kpiQuarterReturn" class="text-xs text-purple-300 font-mono-num font-semibold">0% avg</span>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                    <i class="fa-solid fa-calendar-quarter font-bold"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Split Screen: Left Sidebar (Data Entry) + Right Main Panel (Tabs) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
+
+            <!-- LEFT SIDEBAR: Professional Fast Entry Terminal (4 Cols) -->
+            <div class="lg:col-span-4 xl:col-span-3 bg-slate-900/90 border border-slate-800/90 rounded-lg p-4 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="pb-3 border-b border-slate-800 flex items-center justify-between">
+                        <h2 id="formTitle" class="font-bold text-slate-100 flex items-center gap-2 text-xs uppercase tracking-wider">
+                            <i class="fa-solid fa-square-plus text-blue-400"></i> Research Input Console
+                        </h2>
+                        <span class="text-[10px] px-2 py-0.5 bg-slate-800 text-slate-400 rounded border border-slate-700">Manual Study</span>
+                    </div>
+
+                    <form id="observationForm" onsubmit="handleFormSubmit(event)" class="mt-4 space-y-3">
+                        <input type="hidden" id="editId" value="">
+
+                        <!-- Ticker Symbol -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Stock Ticker / Index Symbol</label>
+                            <input type="text" id="symbol" placeholder="e.g. RELIANCE, NIFTY 50, TCS" required class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 uppercase placeholder-slate-600 font-mono-num">
+                        </div>
+
+                        <!-- Month & Primary Trend -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Target Month</label>
+                                <select id="month" required class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 cursor-pointer">
+                                    <option value="January">January</option>
+                                    <option value="February">February</option>
+                                    <option value="March">March</option>
+                                    <option value="April">April</option>
+                                    <option value="May">May</option>
+                                    <option value="June">June</option>
+                                    <option value="July">July</option>
+                                    <option value="August">August</option>
+                                    <option value="September">September</option>
+                                    <option value="October">October</option>
+                                    <option value="November">November</option>
+                                    <option value="December">December</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Trend Classification</label>
+                                <select id="status" required class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 cursor-pointer">
+                                    <option value="Strong Bullish">🟢 Strong Bullish</option>
+                                    <option value="Mild Bullish">🟢 Mild Bullish</option>
+                                    <option value="Neutral">⚪ Neutral / Sideways</option>
+                                    <option value="Mild Bearish">🔴 Mild Bearish</option>
+                                    <option value="Heavy Bearish">🔴 Heavy Bearish</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Historical Win Rate & Avg Return -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Win Rate % (Positive Yrs)</label>
+                                <input type="number" min="0" max="100" step="0.01" id="winRate" placeholder="e.g. 80" required class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono-num">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Avg Return %</label>
+                                <input type="number" step="0.01" id="avgReturn" placeholder="e.g. +26.55 or -13.76" required class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono-num">
+                            </div>
+                        </div>
+
+                        <!-- Volatility Risk Rating -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Volatility Risk Rating</label>
+                            <select id="volatility" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                                <option value="Low">Low Volatility (Steady)</option>
+                                <option value="Medium" selected>Medium Volatility (Normal)</option>
+                                <option value="High">High Volatility (Aggressive Swing)</option>
+                            </select>
+                        </div>
+
+                        <!-- Driving Factors / Notes -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-300 mb-1">Catalysts / Driving Factors</label>
+                            <textarea id="notes" rows="3" placeholder="e.g. Q3 Earnings, Union Budget, Festive Sales, FII Buying" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 placeholder-slate-600"></textarea>
+                        </div>
+
+                        <!-- Submit / Reset Buttons -->
+                        <div class="pt-2 flex items-center gap-2">
+                            <button type="submit" id="submitBtn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-3 rounded text-xs transition-all shadow-md flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-database"></i> Commit Record
+                            </button>
+                            <button type="button" id="cancelBtn" onclick="resetForm()" class="hidden bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold py-2 px-2.5 rounded text-xs transition-all">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Info Box -->
+                <div class="p-2.5 bg-slate-950/60 border border-slate-800 rounded text-[11px] text-slate-400 space-y-1">
+                    <p class="font-semibold text-slate-300 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info text-blue-400"></i> Pro Research Tip:
+                    </p>
+                    <p>Track stocks over a 5–10 year sample window. Months with <strong>&gt;75% Win Rate</strong> and positive average returns present high probability swing setups.</p>
+                </div>
+            </div>
+
+            <!-- RIGHT MAIN PANEL: Interactive Tabbed Workbench (8-9 Cols) -->
+            <div class="lg:col-span-8 xl:col-span-9 bg-slate-900/90 border border-slate-800/90 rounded-lg p-4 flex flex-col">
+                
+                <!-- Tab Navigation Buttons -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2 mb-4">
+                    <div class="flex flex-wrap items-center gap-1 sm:gap-2">
+                        <button id="tabBtnChart" onclick="switchTab('chart')" class="px-3 py-1.5 rounded text-xs font-semibold bg-blue-600 text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-chart-column"></i> Seasonality Chart
+                        </button>
+                        <button id="tabBtnForecast" onclick="switchTab('forecast')" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-crystal-ball text-amber-400"></i> Future Outlook (Dec 2026+)
+                        </button>
+                        <button id="tabBtnGrid" onclick="switchTab('grid')" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-table-cells"></i> Interactive Data Grid
+                        </button>
+                        <button id="tabBtnMatrix" onclick="switchTab('matrix')" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-cubes-stacked"></i> Stock Comparison Matrix
+                        </button>
+                        <button id="tabBtnInvestments" onclick="switchTab('investments')" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-wallet"></i> Share Investment Notepad
+                        </button>
+                        <button id="tabBtnCompanyList" onclick="switchTab('companyList')" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-building"></i> Company Memory
+                        </button>
+                        <button id="tabBtnAnalyzer" onclick="switchTab('analyzer')" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Screenshot Analyzer
+                        </button>
+                        <button id="tabBtnCalculator" onclick="switchTab('calculator')" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-calculator"></i> Calculator
+                        </button>
+                    </div>
+
+                    <!-- Chart View Toggle (Visible on Tab 1) -->
+                    <div id="chartTypeToggle" class="flex bg-slate-950 p-0.5 rounded border border-slate-800">
+                        <button id="btnViewBar" onclick="switchChartView('bar')" class="px-2.5 py-1 rounded text-[11px] bg-slate-800 text-white font-semibold">Bar</button>
+                        <button id="btnViewLine" onclick="switchChartView('line')" class="px-2.5 py-1 rounded text-[11px] text-slate-400 hover:text-white">Trend</button>
+                    </div>
+                </div>
+
+                <!-- TAB 1: SEASONALITY CHART & HEATMAP -->
+                <div id="tabContentChart" class="flex-1 flex flex-col space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-sm">Monthly Return Performance Profile</h3>
+                            <p class="text-xs text-slate-400">Historical average performance calculated across all active records</p>
+                        </div>
+                    </div>
+                    <div class="relative w-full flex-1 min-h-[360px] bg-slate-950/50 p-3 rounded border border-slate-800/80">
+                        <canvas id="seasonalityChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- NEW TAB: FUTURE MONTH SEASONALITY OUTLOOK & SCENARIO ENGINE -->
+                <div id="tabContentForecast" class="hidden flex-1 flex flex-col space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-crystal-ball text-amber-400"></i> Future Month Seasonality Outlook & Scenario Engine
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Probability-weighted seasonal scenario model for upcoming months (e.g., December 2026) based on stored Win Rate, Avg Return & Volatility</p>
+                        </div>
+                        <span class="text-[10px] px-2 py-1 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-semibold">Statistical Model • Not Financial Advice</span>
+                    </div>
+
+                    <!-- Controls Bar -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-slate-950/70 border border-slate-800 rounded-lg p-3">
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Select Stock / Index</label>
+                            <select id="forecastTickerSelect" onchange="renderForecastEngine()" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 font-mono-num focus:outline-none focus:border-blue-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Month</label>
+                            <select id="forecastMonthSelect" onchange="renderForecastEngine()" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                                <option value="January">January</option>
+                                <option value="February">February</option>
+                                <option value="March">March</option>
+                                <option value="April">April</option>
+                                <option value="May">May</option>
+                                <option value="June">June</option>
+                                <option value="July">July</option>
+                                <option value="August">August</option>
+                                <option value="September">September</option>
+                                <option value="October">October</option>
+                                <option value="November">November</option>
+                                <option value="December" selected>December (2026)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Target Year</label>
+                            <select id="forecastYearSelect" onchange="renderForecastEngine()" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 font-mono-num focus:outline-none focus:border-blue-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Current Price ₹ (Optional)</label>
+                            <input id="forecastCurrentPrice" type="number" min="0" step="0.01" oninput="renderForecastEngine()" placeholder="e.g. 1225.40" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 font-mono-num focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Volatility Spread Multiplier</label>
+                            <select id="forecastVolMultiplier" onchange="renderForecastEngine()" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                                <option value="0.75">Conservative (0.75x Spread)</option>
+                                <option value="1" selected>Standard (1.00x Spread)</option>
+                                <option value="1.5">Wide Swing (1.50x Spread)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Forecast Cards Container -->
+                    <div id="forecastOutputContainer" class="space-y-4"></div>
+                </div>
+
+                <!-- TAB 2: EXCEL-LIKE DATA GRID TABLE -->
+                <div id="tabContentGrid" class="hidden flex-1 flex flex-col space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-sm">Historical Seasonality Records</h3>
+                            <p class="text-xs text-slate-400">Search, filter, edit, or delete stored research data</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search ticker or catalysts..." class="bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono-num">
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Table -->
+                    <div class="overflow-x-auto rounded border border-slate-800/90 max-h-[500px]">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold tracking-wider sticky top-0 border-b border-slate-800">
+                                <tr>
+                                    <th class="p-2.5">Month</th>
+                                    <th class="p-2.5">Ticker</th>
+                                    <th class="p-2.5">Trend Status</th>
+                                    <th class="p-2.5 font-mono-num">Win Rate %</th>
+                                    <th class="p-2.5 font-mono-num">Avg Return</th>
+                                    <th class="p-2.5">Volatility Risk</th>
+                                    <th class="p-2.5">Catalysts / Notes</th>
+                                    <th class="p-2.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-800/70 bg-slate-900/60 font-medium">
+                                <!-- JS Table Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 3: STOCK COMPARISON MATRIX -->
+                <div id="tabContentMatrix" class="hidden flex-1 flex flex-col space-y-3">
+                    <div>
+                        <h3 class="font-bold text-slate-100 text-sm">Stock Strategy & Comparison Summary</h3>
+                        <p class="text-xs text-slate-400">Aggregated seasonality metric breakdown per stock ticker (including Win-Rate Weighted Expectancy)</p>
+                    </div>
+
+                    <div class="overflow-x-auto rounded border border-slate-800/90">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold tracking-wider border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3">Stock Ticker</th>
+                                    <th class="p-3">Total Months Tracked</th>
+                                    <th class="p-3 text-emerald-400">Best Seasonality Month</th>
+                                    <th class="p-3 text-rose-400">Weakest Seasonality Month</th>
+                                    <th class="p-3 font-mono-num">Avg Win Rate</th>
+                                    <th class="p-3 font-mono-num">Weighted Expectancy</th>
+                                    <th class="p-3 font-mono-num">Annual Avg Expectancy</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrixTableBody" class="divide-y divide-slate-800/70 bg-slate-900/60">
+                                <!-- Generated Matrix Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 4: SHARE INVESTMENT NOTEPAD -->
+                <div id="tabContentInvestments" class="hidden flex-1 flex flex-col space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-sm">Share Investment Notepad</h3>
+                            <p class="text-xs text-slate-400">Excel-style personal and family share purchase register</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <input id="investmentSearch" oninput="renderInvestments()" placeholder="Search person or company..." class="bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100">
+                            <button onclick="exportInvestmentsCSV()" class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold"><i class="fa-solid fa-file-csv mr-1"></i>Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div class="bg-slate-950/70 border border-slate-800 rounded p-3"><div class="text-[10px] uppercase text-slate-400">Total Entries</div><div id="investmentCount" class="text-lg font-bold text-blue-400">0</div></div>
+                        <div class="bg-slate-950/70 border border-slate-800 rounded p-3"><div class="text-[10px] uppercase text-slate-400">Total Shares</div><div id="investmentShares" class="text-lg font-bold text-emerald-400">0</div></div>
+                        <div class="bg-slate-950/70 border border-slate-800 rounded p-3"><div class="text-[10px] uppercase text-slate-400">Total Investment</div><div id="investmentTotal" class="text-lg font-bold text-amber-400 font-mono-num">₹0.00</div></div>
+                    </div>
+                    <form onsubmit="addInvestment(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 bg-slate-950/60 border border-slate-800 rounded p-3">
+                        <input id="invPerson" required maxlength="80" placeholder="Person name" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <input id="invCompany" required maxlength="100" placeholder="Company / Share name" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <input id="invQty" required type="number" min="0.000001" step="any" placeholder="Share quantity" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <input id="invPrice" required type="number" min="0" step="0.01" placeholder="Buy price / share (₹)" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <input id="invDate" type="date" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white rounded px-3 py-2 text-xs font-bold"><i class="fa-solid fa-plus mr-1"></i>Add Entry</button>
+                        <div class="sm:col-span-2 lg:col-span-6 flex flex-wrap items-center gap-3">
+                            <label class="text-xs text-slate-300">Person profile photo <input id="invPersonPhoto" type="file" accept="image/*" onchange="previewPersonPhoto(event)" class="block mt-1 text-[10px] text-slate-400 file:mr-2 file:rounded file:border-0 file:bg-slate-700 file:px-2 file:py-1 file:text-white"></label>
+                            <img id="invPersonPhotoPreview" class="hidden h-12 w-12 rounded-full object-cover border border-slate-600" alt="Person photo preview">
+                            <span class="text-[10px] text-slate-500">Same person's photo will appear on all their entries. Uploading a new photo updates that person's profile.</span>
+                        </div>
+                        <input id="invNotes" maxlength="300" placeholder="Notes (optional)" class="sm:col-span-2 lg:col-span-6 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                    </form>
+                    <div class="overflow-x-auto rounded border border-slate-800/90 max-h-[500px]">
+                        <table class="w-full min-w-[850px] text-left border-collapse text-xs">
+                            <thead class="sticky top-0 bg-slate-950 text-slate-400 uppercase text-[10px] font-bold tracking-wider"><tr>
+                                <th class="p-3">Person Name</th><th class="p-3">Company</th><th class="p-3 text-right">Shares</th><th class="p-3 text-right">Buy Price</th><th class="p-3 text-right">Total Investment</th><th class="p-3">Date</th><th class="p-3">Notes</th><th class="p-3">Actions</th>
+                            </tr></thead>
+                            <tbody id="investmentTableBody" class="divide-y divide-slate-800/70 bg-slate-900/60"></tbody>
+                        </table>
+                    </div>
+                    <p class="text-[10px] text-slate-500">Records are saved in this browser on this device. This is a manual record-keeping tool; prices and values are not live market data.</p>
+                </div>
+
+                <!-- TAB: COMPANY MEMORY NOTEPAD -->
+                <div id="tabContentCompanyList" class="hidden flex-1 flex flex-col space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div><h3 class="font-bold text-slate-100 text-sm">Company Memory Notepad</h3><p class="text-xs text-slate-400">Save company names, logos and your own research notes for future reference</p></div>
+                        <input id="companyMemorySearch" oninput="renderCompanyMemory()" placeholder="Search company, sector or notes..." class="bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100">
+                    </div>
+                    <form onsubmit="saveCompanyMemory(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 bg-slate-950/60 border border-slate-800 rounded p-3">
+                        <input id="cmName" required maxlength="100" placeholder="Company name (e.g. HDFC Bank)" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <input id="cmSymbol" maxlength="30" placeholder="NSE symbol (optional)" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <input id="cmSector" maxlength="70" placeholder="Sector / Industry (optional)" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100">
+                        <select id="cmTag" class="bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100"><option value="To Research">To Research</option><option value="Watching">Watching</option><option value="Good to Know">Good to Know</option><option value="Avoid / Caution">Avoid / Caution</option></select>
+                        <textarea id="cmNotes" maxlength="1200" rows="2" placeholder="Why did you save this company? Your research, observations, risks, source..." class="sm:col-span-2 lg:col-span-4 bg-slate-900 border border-slate-700 rounded px-2 py-2 text-xs text-slate-100"></textarea>
+                        <div class="sm:col-span-2 lg:col-span-4 flex flex-wrap items-center gap-3">
+                            <label class="text-xs text-slate-300">Company logo / image <input id="cmLogo" type="file" accept="image/*" class="block mt-1 text-[10px] text-slate-400 file:mr-2 file:rounded file:border-0 file:bg-slate-700 file:px-2 file:py-1 file:text-white"></label>
+                            <img id="cmLogoPreview" class="hidden h-12 w-12 rounded-lg object-contain bg-white p-1 border border-slate-600" alt="Company logo preview">
+                            <button type="submit" id="cmSaveBtn" class="bg-blue-600 hover:bg-blue-500 text-white rounded px-4 py-2 text-xs font-bold"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Company</button>
+                            <button type="button" onclick="resetCompanyMemoryForm()" class="bg-slate-700 hover:bg-slate-600 text-white rounded px-3 py-2 text-xs">Clear Form</button>
+                            <span class="text-[10px] text-slate-500">Saved in this browser on this device. Add your own notes; this is not an investment recommendation.</span>
+                        </div>
+                    </form>
+                    <div class="flex items-center justify-between"><span id="cmCount" class="text-xs text-slate-400">0 companies saved</span><span class="text-[10px] text-slate-500">Use JSON Backup / Restore to carry this list to another device.</span></div>
+                    <div id="companyMemoryList" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+                </div>
+
+                <!-- TAB: BUILT-IN CALCULATOR -->
+                <div id="tabContentCalculator" class="hidden flex-1 flex flex-col space-y-3">
+                    <div>
+                        <h3 class="font-bold text-slate-100 text-sm"><i class="fa-solid fa-calculator text-blue-400 mr-1"></i> Built-in Calculator</h3>
+                        <p class="text-xs text-slate-400 mt-1">Basic calculations, percentage, share value and profit/loss arithmetic.</p>
+                    </div>
+                    <div class="w-full max-w-md mx-auto bg-slate-950 border border-slate-700 rounded-xl p-3 sm:p-4 shadow-lg">
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 mb-3">
+                            <div id="calcExpression" class="text-[11px] text-slate-500 text-right min-h-4 break-all"></div>
+                            <input id="calcDisplay" aria-label="Calculator display" readonly value="0" class="w-full bg-transparent border-0 text-right text-3xl sm:text-4xl font-semibold text-slate-100 focus:outline-none p-0 mt-1 font-mono-num">
+                        </div>
+                        <div class="grid grid-cols-4 gap-2" id="calculatorKeys">
+                            <button type="button" onclick="calculatorAction('clear')" class="calc-key bg-rose-950/70 hover:bg-rose-900 text-rose-300 rounded-lg py-3 font-semibold">AC</button>
+                            <button type="button" onclick="calculatorAction('sign')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 font-semibold">+/−</button>
+                            <button type="button" onclick="calculatorAction('percent')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 font-semibold">%</button>
+                            <button type="button" onclick="calculatorAction('operator','÷')" class="calc-key bg-blue-900/70 hover:bg-blue-800 text-blue-200 rounded-lg py-3 font-semibold">÷</button>
+                            <button type="button" onclick="calculatorAction('digit','7')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">7</button>
+                            <button type="button" onclick="calculatorAction('digit','8')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">8</button>
+                            <button type="button" onclick="calculatorAction('digit','9')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">9</button>
+                            <button type="button" onclick="calculatorAction('operator','×')" class="calc-key bg-blue-900/70 hover:bg-blue-800 text-blue-200 rounded-lg py-3 font-semibold">×</button>
+                            <button type="button" onclick="calculatorAction('digit','4')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">4</button>
+                            <button type="button" onclick="calculatorAction('digit','5')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">5</button>
+                            <button type="button" onclick="calculatorAction('digit','6')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">6</button>
+                            <button type="button" onclick="calculatorAction('operator','−')" class="calc-key bg-blue-900/70 hover:bg-blue-800 text-blue-200 rounded-lg py-3 font-semibold">−</button>
+                            <button type="button" onclick="calculatorAction('digit','1')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">1</button>
+                            <button type="button" onclick="calculatorAction('digit','2')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">2</button>
+                            <button type="button" onclick="calculatorAction('digit','3')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">3</button>
+                            <button type="button" onclick="calculatorAction('operator','+')" class="calc-key bg-blue-900/70 hover:bg-blue-800 text-blue-200 rounded-lg py-3 font-semibold">+</button>
+                            <button type="button" onclick="calculatorAction('backspace')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3"><i class="fa-solid fa-delete-left"></i></button>
+                            <button type="button" onclick="calculatorAction('digit','0')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">0</button>
+                            <button type="button" onclick="calculatorAction('decimal')" class="calc-key bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-3 text-base">.</button>
+                            <button type="button" onclick="calculatorAction('equals')" class="calc-key bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg py-3 font-bold">=</button>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-3 text-center">Calculator only. Results are not saved to your investment records.</p>
+                    </div>
+                </div>
+
+                <!-- TAB 5: OFFLINE-STYLE SCREENSHOT OCR ANALYZER -->
+                <div id="tabContentAnalyzer" class="hidden flex-1 flex flex-col space-y-4">
+                    <div>
+                        <h3 class="font-bold text-slate-100 text-sm"><i class="fa-solid fa-wand-magic-sparkles text-violet-400 mr-1"></i> AI-Style Market Screenshot Analyzer</h3>
+                        <p class="text-xs text-slate-400 mt-1">Upload a market screenshot. Browser OCR reads visible text; you verify the price before calculations.</p>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 space-y-3">
+                            <label class="block text-xs font-semibold text-slate-300">1. Upload market screenshot</label>
+                            <input id="marketScreenshot" type="file" accept="image/*" onchange="previewMarketScreenshot(event)" class="block w-full text-xs text-slate-300 file:mr-3 file:rounded file:border-0 file:bg-violet-700 file:px-3 file:py-2 file:text-white">
+                            <img id="marketScreenshotPreview" class="hidden max-h-64 max-w-full mx-auto rounded border border-slate-700 object-contain" alt="Market screenshot preview">
+                            <button id="runOcrButton" onclick="runMarketOCR()" class="w-full rounded bg-violet-700 hover:bg-violet-600 text-white text-xs font-bold px-3 py-2"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Read Screenshot (OCR)</button>
+                            <div id="ocrStatus" class="text-[11px] text-slate-400" aria-live="polite">OCR runs in your browser. First use may download the OCR engine and English language data; no API key is required.</div>
+                            <div class="h-1.5 bg-slate-800 rounded overflow-hidden"><div id="ocrProgress" class="h-full bg-violet-500" style="width:0%"></div></div>
+                        </div>
+                        <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 space-y-3">
+                            <label class="block text-xs font-semibold text-slate-300">2. Verify extracted values</label>
+                            <label class="block text-[11px] text-slate-400">Company / Symbol</label>
+                            <input id="ocrCompany" list="ocrCompanyOptions" placeholder="e.g. RELIANCE or Reliance Industries" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-2 text-xs text-slate-100">
+                            <datalist id="ocrCompanyOptions"></datalist>
+                            <label class="block text-[11px] text-slate-400">Current price (₹)</label>
+                            <input id="ocrPrice" type="number" min="0" step="0.01" placeholder="Check OCR result and enter correct LTP" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-2 text-xs text-slate-100">
+                            <label class="block text-[11px] text-slate-400">OCR text (editable; use it to verify)</label>
+                            <textarea id="ocrRawText" rows="5" placeholder="Recognized screenshot text will appear here..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-2 text-xs text-slate-100"></textarea>
+                            <p class="text-[10px] text-amber-300">Important: OCR can misread symbols and prices. It does not verify live prices or connect to an exchange.</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div><h4 class="text-xs font-bold text-slate-200">3. Calculate against your saved investment</h4><p class="text-[10px] text-slate-500">Select the person and company record to compare with the screenshot price.</p></div>
+                            <button onclick="calculateScreenshotPortfolio()" class="rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2">Calculate Portfolio</button>
+                        </div>
+                        <select id="ocrHoldingSelect" onchange="fillAnalyzerCompany()" class="w-full sm:max-w-md bg-slate-900 border border-slate-700 rounded px-2.5 py-2 text-xs text-slate-100"><option value="">Select saved person / company holding</option></select>
+                        <div id="ocrPersonProfile" class="hidden flex items-center gap-3 rounded border border-slate-700 bg-slate-900/80 p-3">
+                            <img id="ocrPersonPhoto" class="h-12 w-12 rounded-full object-cover border border-slate-600" alt="Selected person photo">
+                            <div><div id="ocrPersonName" class="text-sm font-bold text-slate-100"></div><div id="ocrPersonCompany" class="text-[11px] text-slate-400"></div></div>
+                        </div>
+                        <div id="ocrCalculation" class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                            <div class="bg-slate-900 rounded p-3"><div class="text-[10px] text-slate-400">Shares</div><div class="text-sm font-bold text-slate-100">—</div></div>
+                            <div class="bg-slate-900 rounded p-3"><div class="text-[10px] text-slate-400">Investment</div><div class="text-sm font-bold text-slate-100">—</div></div>
+                            <div class="bg-slate-900 rounded p-3"><div class="text-[10px] text-slate-400">Current Value</div><div class="text-sm font-bold text-slate-100">—</div></div>
+                            <div class="bg-slate-900 rounded p-3"><div class="text-[10px] text-slate-400">Unrealized P/L</div><div class="text-sm font-bold text-slate-100">—</div></div>
+                            <div class="bg-slate-900 rounded p-3"><div class="text-[10px] text-slate-400">Return</div><div class="text-sm font-bold text-slate-100">—</div></div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2"><button onclick="exportScreenshotProfitLossCSV()" class="rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-2"><i class="fa-solid fa-file-csv mr-1"></i> Export P/L Report (Excel CSV)</button><button onclick="saveScreenshotPrice()" class="rounded bg-blue-700 hover:bg-blue-600 text-white text-xs font-semibold px-3 py-2">Save verified price on this device</button><span id="ocrSavedStatus" class="text-[10px] text-slate-500"></span></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-terminal-card border-t border-terminal-border py-2.5 text-center text-[11px] text-slate-500">
+        ProStock Terminal &bull; Professional Market Seasonality & Quantitative Pattern Workbench
+    </footer>
+
+    <!-- Terminal JavaScript Engine -->
+    <script>
+        // Sample Pre-loaded Bluechip Data for Indian Stock Market
+        const PRELOADED_DATA = [
+            { id: '1', symbol: 'NIFTY 50', month: 'January', winRate: 60, avgReturn: 0.8, status: 'Mild Bullish', volatility: 'Medium', notes: 'Pre-budget positioning & Q3 results sentiment' },
+            { id: '2', symbol: 'NIFTY 50', month: 'February', winRate: 40, avgReturn: -1.2, status: 'Mild Bearish', volatility: 'High', notes: 'Union Budget volatility & post-event profit booking' },
+            { id: '3', symbol: 'NIFTY 50', month: 'March', winRate: 45, avgReturn: -0.5, status: 'Neutral', volatility: 'Medium', notes: 'Financial year-end tax adjustments & liquidity' },
+            { id: '4', symbol: 'NIFTY 50', month: 'April', winRate: 85, avgReturn: 3.4, status: 'Strong Bullish', volatility: 'Low', notes: 'New fiscal year capital deployment. Highest win-rate month' },
+            { id: '5', symbol: 'NIFTY 50', month: 'May', winRate: 40, avgReturn: -0.4, status: 'Mild Bearish', volatility: 'Medium', notes: 'Sell in May international phenomenon' },
+            { id: '6', symbol: 'NIFTY 50', month: 'June', winRate: 65, avgReturn: 1.5, status: 'Mild Bullish', volatility: 'Medium', notes: 'Monsoon onset & Q1 earnings accumulation' },
+            { id: '7', symbol: 'NIFTY 50', month: 'July', winRate: 70, avgReturn: 2.2, status: 'Strong Bullish', volatility: 'Low', notes: 'Corporate earnings season momentum' },
+            { id: '8', symbol: 'NIFTY 50', month: 'August', winRate: 60, avgReturn: 1.1, status: 'Mild Bullish', volatility: 'Low', notes: 'Steady institutional allocation' },
+            { id: '9', symbol: 'NIFTY 50', month: 'September', winRate: 35, avgReturn: -1.8, status: 'Heavy Bearish', volatility: 'High', notes: 'Historically weakest global equity month' },
+            { id: '10', symbol: 'NIFTY 50', month: 'October', winRate: 65, avgReturn: 1.2, status: 'Mild Bullish', volatility: 'Medium', notes: 'Diwali festive season demand & Q2 earnings' },
+            { id: '11', symbol: 'NIFTY 50', month: 'November', winRate: 75, avgReturn: 2.7, status: 'Strong Bullish', volatility: 'Low', notes: 'Diwali Muhurat rally & FII net buying' },
+            { id: '12', symbol: 'NIFTY 50', month: 'December', winRate: 80, avgReturn: 2.9, status: 'Strong Bullish', volatility: 'Low', notes: 'Santa Claus rally & institutional year-end NAV dressing' },
+            
+            // Reliance Industries
+            { id: '13', symbol: 'RELIANCE', month: 'March', winRate: 70, avgReturn: 3.1, status: 'Strong Bullish', volatility: 'Medium', notes: 'Refining margin expansion & fiscal year-end rally' },
+            { id: '14', symbol: 'RELIANCE', month: 'September', winRate: 30, avgReturn: -2.1, status: 'Heavy Bearish', volatility: 'High', notes: 'AGM post-event profit taking' },
+            { id: '15', symbol: 'RELIANCE', month: 'December', winRate: 75, avgReturn: 3.8, status: 'Strong Bullish', volatility: 'Low', notes: 'Energy sector allocation' },
+
+            // TCS (IT Leader)
+            { id: '16', symbol: 'TCS', month: 'July', winRate: 80, avgReturn: 4.2, status: 'Strong Bullish', volatility: 'Low', notes: 'Q1 Results outperformance & USD strengthening' },
+            { id: '17', symbol: 'TCS', month: 'December', winRate: 75, avgReturn: 3.0, status: 'Strong Bullish', volatility: 'Low', notes: 'US client budget approvals & IT rally' },
+            { id: '18', symbol: 'TCS', month: 'February', winRate: 35, avgReturn: -1.9, status: 'Mild Bearish', volatility: 'Medium', notes: 'Q3 quiet period' },
+
+            // HDFC Bank
+            { id: '19', symbol: 'HDFCBANK', month: 'April', winRate: 80, avgReturn: 3.6, status: 'Strong Bullish', volatility: 'Low', notes: 'Credit growth figures & annual bank rally' },
+            { id: '20', symbol: 'HDFCBANK', month: 'November', winRate: 70, avgReturn: 2.5, status: 'Mild Bullish', volatility: 'Medium', notes: 'Festive retail loan expansion' },
+
+            // Tata Motors
+            { id: '21', symbol: 'TATAMOTORS', month: 'October', winRate: 75, avgReturn: 5.2, status: 'Strong Bullish', volatility: 'High', notes: 'Navratri/Diwali auto retail sales boom' }
+        ];
+
+        const MONTH_ORDER = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+
+        // Core App State
+        let observations = [];
+        let shareInvestments = [];
+        let companyMemory = [];
+        let companyMemoryEditId = null;
+        let companyMemoryLogoData = '';
+        let seasonalityChart = null;
+        let currentChartType = 'bar';
+        let activeTab = 'chart';
+
+        // Light / Dark Mode switch (theme preference is saved separately from research data)
+        function applyTheme(theme) {
+            const isDark = theme === 'dark';
+            document.documentElement.classList.toggle('dark', isDark);
+            localStorage.setItem('prostock_theme', theme);
+
+            const button = document.getElementById('themeToggle');
+            const icon = document.getElementById('themeToggleIcon');
+            const label = document.getElementById('themeToggleLabel');
+
+            if (button && icon && label) {
+                icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+                label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+                button.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+            }
+
+            // Re-render Chart.js so its labels and grid match the selected theme.
+            if (typeof renderDashboard === 'function' && seasonalityChart) {
+                renderDashboard();
+            }
+        }
+
+        function toggleTheme() {
+            const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+            applyTheme(nextTheme);
+        }
+
+        let terminalSoundEnabled = localStorage.getItem('prostock_sound_enabled') !== 'false';
+        let terminalAudioContext = null;
+        let lastTypingToneAt = 0;
+        let lastSignalKey = '';
+
+        function syncSoundButton() {
+            const icon = document.getElementById('soundToggleIcon');
+            const label = document.getElementById('soundToggleLabel');
+            const btn = document.getElementById('soundToggle');
+            if (!icon || !label || !btn) return;
+            icon.className = terminalSoundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+            label.textContent = terminalSoundEnabled ? 'Sound ON' : 'Sound OFF';
+            btn.setAttribute('aria-pressed', String(terminalSoundEnabled));
+        }
+        function toggleTerminalSound() {
+            terminalSoundEnabled = !terminalSoundEnabled;
+            localStorage.setItem('prostock_sound_enabled', String(terminalSoundEnabled));
+            syncSoundButton();
+            if (terminalSoundEnabled) playTone('save');
+        }
+        // Clear two-note "tin-tin" terminal chime. Uses Web Audio only; no external sound files.
+        // Volume is intentionally stronger than the previous subtle click, but remains short and non-intrusive.
+        function playTone(kind) {
+            if (!terminalSoundEnabled) return;
+            try {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return;
+                terminalAudioContext = terminalAudioContext || new AC();
+                if (terminalAudioContext.state === 'suspended') terminalAudioContext.resume();
+
+                const presets = {
+                    typing:      { notes:[740], duration:.045, wave:'sine', volume:.045 },
+                    nav:         { notes:[660,880], duration:.105, wave:'sine', volume:.105 },
+                    save:        { notes:[784,1046], duration:.16, wave:'sine', volume:.14 },
+                    error:       { notes:[260,190], duration:.18, wave:'triangle', volume:.12 },
+                    bullish:     { notes:[660,880], duration:.15, wave:'sine', volume:.12 },
+                    caution:     { notes:[520,390], duration:.16, wave:'triangle', volume:.11 },
+                    bearish:     { notes:[330,220], duration:.19, wave:'triangle', volume:.11 },
+                    high:        { notes:[880,1175], duration:.17, wave:'sine', volume:.14 },
+                    insufficient:{ notes:[440,330], duration:.14, wave:'sine', volume:.09 }
+                };
+                const preset = presets[kind] || presets.nav;
+                const now = terminalAudioContext.currentTime;
+
+                preset.notes.forEach((hz, index) => {
+                    const startAt = now + index * (preset.duration * 0.48);
+                    const osc = terminalAudioContext.createOscillator();
+                    const gain = terminalAudioContext.createGain();
+                    osc.type = preset.wave;
+                    osc.frequency.setValueAtTime(hz, startAt);
+                    gain.gain.setValueAtTime(0.0001, startAt);
+                    gain.gain.exponentialRampToValueAtTime(preset.volume, startAt + 0.012);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + preset.duration);
+                    osc.connect(gain);
+                    gain.connect(terminalAudioContext.destination);
+                    osc.start(startAt);
+                    osc.stop(startAt + preset.duration + 0.025);
+                });
+            } catch (e) {
+                // Audio is optional and must never block app functions.
+            }
+        }
+        function playSignalSound(type) {
+            playTone(({bullish:'bullish',caution:'caution',bearish:'bearish',high:'high',insufficient:'insufficient'})[type] || 'caution');
+        }
+        function maybeNotifySignal(ticker, month, year, label) {
+            const key = `${ticker}|${month}|${year}|${label}`;
+            if (key === lastSignalKey) return;
+            lastSignalKey = key;
+            if (!('Notification' in window)) return;
+            const notify = () => {
+                if (Notification.permission === 'granted') {
+                    try { new Notification(`StockTrend IQ: ${label}`, { body:`${ticker} • ${month} ${year}. Review scenario values and sample warning in the terminal.` }); } catch(e) {}
+                }
+            };
+            if (Notification.permission === 'granted') notify();
+            else if (Notification.permission === 'default' && document.visibilityState === 'visible') {
+                Notification.requestPermission().then(permission => { if (permission === 'granted') notify(); }).catch(() => {});
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            syncSoundButton();
+            document.addEventListener('keydown', event => {
+                const tag = event.target && event.target.tagName;
+                if (['INPUT','TEXTAREA','SELECT'].includes(tag) && event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                    const now = Date.now();
+                    if (now - lastTypingToneAt > 70) { lastTypingToneAt = now; playTone('typing'); }
+                }
+                if (event.key === 'Enter' && tag === 'INPUT' && event.target.id !== 'calcDisplay') {
+                    const form = event.target.closest('form');
+                    if (form) {
+                        const fields = [...form.querySelectorAll('input:not([type=hidden]),select,textarea,button[type=submit]')].filter(el => !el.disabled);
+                        const index = fields.indexOf(event.target);
+                        if (index >= 0 && index < fields.length - 1) {
+                            event.preventDefault(); fields[index + 1].focus(); playTone('nav');
+                        }
+                    }
+                }
+            });
+            document.addEventListener('focusin', event => {
+                if (event.target && ['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName)) playTone('nav');
+            });
+            document.addEventListener('click', event => {
+                if (event.target.closest('button')) playTone('nav');
+            });
+        });
+
+        window.onload = function() {
+            loadObservations();
+            loadInvestments();
+            loadCompanyMemory();
+            populateIndexFilter();
+            renderDashboard();
+            syncSoundButton();
+        };
+
+        function loadObservations() {
+            const stored = localStorage.getItem('prostock_seasonality_data');
+            if (stored) {
+                try {
+                    observations = JSON.parse(stored);
+                } catch(e) {
+                    observations = [...PRELOADED_DATA];
+                }
+            } else {
+                observations = [...PRELOADED_DATA];
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('prostock_seasonality_data', JSON.stringify(observations));
+        }
+
+        function resetDefaultData() {
+            if (confirm("Reset research database to pre-loaded Indian Bluechip seasonality records?")) {
+                observations = [...PRELOADED_DATA];
+                saveToLocalStorage();
+                populateIndexFilter();
+                renderDashboard();
+            }
+        }
+
+        function populateIndexFilter() {
+            const select = document.getElementById('indexFilter');
+            const currentValue = select.value;
+            const symbols = [...new Set(observations.map(item => item.symbol.toUpperCase()))];
+            
+            select.innerHTML = '<option value="ALL" class="bg-slate-900">All Tickers (Combined Matrix)</option>';
+            symbols.forEach(sym => {
+                const opt = document.createElement('option');
+                opt.value = sym;
+                opt.textContent = sym;
+                opt.className = 'bg-slate-900';
+                select.appendChild(opt);
+            });
+
+            if (symbols.includes(currentValue)) {
+                select.value = currentValue;
+            } else {
+                select.value = 'ALL';
+            }
+        }
+
+        function getFilteredData() {
+            const selected = document.getElementById('indexFilter').value;
+            if (selected === 'ALL') return observations;
+            return observations.filter(item => item.symbol.toUpperCase() === selected);
+        }
+
+        function filterData() {
+            renderDashboard();
+        }
+
+        // Calculate Monthly Aggregates for Chart & KPIs
+        function getMonthlyAggregates(data) {
+            const monthlyStats = {};
+            MONTH_ORDER.forEach(m => {
+                monthlyStats[m] = { totalReturn: 0, totalWinRate: 0, count: 0 };
+            });
+
+            data.forEach(item => {
+                if (monthlyStats[item.month]) {
+                    monthlyStats[item.month].totalReturn += parseFloat(item.avgReturn);
+                    monthlyStats[item.month].totalWinRate += parseFloat(item.winRate || 50);
+                    monthlyStats[item.month].count += 1;
+                }
+            });
+
+            return MONTH_ORDER.map(m => {
+                const stat = monthlyStats[m];
+                const count = stat.count || 1;
+                return {
+                    month: m,
+                    avgReturn: stat.count > 0 ? parseFloat((stat.totalReturn / count).toFixed(2)) : 0,
+                    avgWinRate: stat.count > 0 ? Math.round(stat.totalWinRate / count) : 0,
+                    count: stat.count
+                };
+            });
+        }
+
+        // Global Render Trigger
+        function renderDashboard() {
+            const filtered = getFilteredData();
+            const monthlyAggs = getMonthlyAggregates(filtered);
+
+            updateKPIs(monthlyAggs);
+            renderChart(monthlyAggs);
+            renderTable(filtered);
+            renderMatrix();
+            populateForecastControls();
+            renderForecastEngine();
+        }
+
+        // Update Stat Ticker Bar
+        function updateKPIs(monthlyAggs) {
+            let bestMonth = monthlyAggs[0];
+            let worstMonth = monthlyAggs[0];
+
+            monthlyAggs.forEach(m => {
+                if (m.avgReturn > bestMonth.avgReturn) bestMonth = m;
+                if (m.avgReturn < worstMonth.avgReturn) worstMonth = m;
+            });
+
+            document.getElementById('kpiBestMonth').innerText = bestMonth.avgReturn > 0 ? bestMonth.month : 'N/A';
+            document.getElementById('kpiBestReturn').innerText = `${bestMonth.avgReturn > 0 ? '+' : ''}${bestMonth.avgReturn}%`;
+
+            document.getElementById('kpiWorstMonth').innerText = worstMonth.avgReturn < 0 ? worstMonth.month : 'N/A';
+            document.getElementById('kpiWorstReturn').innerText = `${worstMonth.avgReturn}%`;
+
+            // Overall Win Rate Avg
+            const totalWinSum = monthlyAggs.reduce((acc, curr) => acc + curr.avgWinRate, 0);
+            const overallWinRate = Math.round(totalWinSum / 12);
+            const bullMonths = monthlyAggs.filter(m => m.avgReturn > 0).length;
+
+            document.getElementById('kpiWinRate').innerText = `${overallWinRate}%`;
+            document.getElementById('kpiRatio').innerText = `(${bullMonths} / 12 Bullish)`;
+
+            // Best Quarter
+            const q1Avg = (monthlyAggs[0].avgReturn + monthlyAggs[1].avgReturn + monthlyAggs[2].avgReturn) / 3;
+            const q2Avg = (monthlyAggs[3].avgReturn + monthlyAggs[4].avgReturn + monthlyAggs[5].avgReturn) / 3;
+            const q3Avg = (monthlyAggs[6].avgReturn + monthlyAggs[7].avgReturn + monthlyAggs[8].avgReturn) / 3;
+            const q4Avg = (monthlyAggs[9].avgReturn + monthlyAggs[10].avgReturn + monthlyAggs[11].avgReturn) / 3;
+
+            const quarters = [
+                { name: 'Q1 (Jan-Mar)', avg: q1Avg },
+                { name: 'Q2 (Apr-Jun)', avg: q2Avg },
+                { name: 'Q3 (Jul-Sep)', avg: q3Avg },
+                { name: 'Q4 (Oct-Dec)', avg: q4Avg }
+            ].sort((a, b) => b.avg - a.avg);
+
+            document.getElementById('kpiBestQuarter').innerText = quarters[0].name.split(' ')[0];
+            document.getElementById('kpiQuarterReturn').innerText = `${quarters[0].avg > 0 ? '+' : ''}${quarters[0].avg.toFixed(1)}% avg`;
+        }
+
+        // Render Chart.js
+        function renderChart(monthlyAggs) {
+            const ctx = document.getElementById('seasonalityChart').getContext('2d');
+            const labels = monthlyAggs.map(m => m.month.substring(0, 3));
+            const returnsData = monthlyAggs.map(m => m.avgReturn);
+            
+            const backgroundColors = returnsData.map(val => val >= 0 ? 'rgba(16, 185, 129, 0.75)' : 'rgba(244, 63, 94, 0.75)');
+            const borderColors = returnsData.map(val => val >= 0 ? '#10b981' : '#f43f5e');
+
+            if (seasonalityChart) {
+                seasonalityChart.destroy();
+            }
+
+            seasonalityChart = new Chart(ctx, {
+                type: currentChartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Average Monthly Return (%)',
+                        data: returnsData,
+                        backgroundColor: currentChartType === 'line' ? 'rgba(59, 130, 246, 0.15)' : backgroundColors,
+                        borderColor: currentChartType === 'line' ? '#3b82f6' : borderColors,
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        tension: 0.3,
+                        fill: currentChartType === 'line'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    const monthObj = monthlyAggs[context.dataIndex];
+                                    return [
+                                        `Avg Return: ${val > 0 ? '+' : ''}${val}%`,
+                                        `Historical Win Rate: ${monthObj.avgWinRate}%`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.05)' : 'rgba(100, 116, 139, 0.20)' },
+                            ticks: { 
+                                color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#475569',
+                                font: { family: 'JetBrains Mono' },
+                                callback: function(value) { return value + '%'; }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#475569', font: { weight: '600' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function switchChartView(type) {
+            currentChartType = type;
+            const btnBar = document.getElementById('btnViewBar');
+            const btnLine = document.getElementById('btnViewLine');
+
+            if (type === 'bar') {
+                btnBar.className = "px-2.5 py-1 rounded text-[11px] bg-slate-800 text-white font-semibold";
+                btnLine.className = "px-2.5 py-1 rounded text-[11px] text-slate-400 hover:text-white";
+            } else {
+                btnLine.className = "px-2.5 py-1 rounded text-[11px] bg-slate-800 text-white font-semibold";
+                btnBar.className = "px-2.5 py-1 rounded text-[11px] text-slate-400 hover:text-white";
+            }
+            renderDashboard();
+        }
+
+        // TAB SWITCHING LOGIC
+        function switchTab(tabName) {
+            activeTab = tabName;
+            const tabs = ['chart', 'forecast', 'grid', 'matrix', 'investments', 'companyList', 'analyzer', 'calculator'];
+            
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                
+                if (t === tabName) {
+                    btn.className = "px-3 py-1.5 rounded text-xs font-semibold bg-blue-600 text-white transition-all flex items-center gap-1.5";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center gap-1.5";
+                    content.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('chartTypeToggle').style.display = tabName === 'chart' ? 'flex' : 'none';
+            if (tabName === 'forecast') { populateForecastControls(); renderForecastEngine(); }
+            if (tabName === 'investments') renderInvestments();
+            if (tabName === 'companyList') renderCompanyMemory();
+            if (tabName === 'analyzer') refreshAnalyzerHoldings();
+        }
+
+        // FUTURE OUTLOOK & SCENARIO ENGINE
+        function populateForecastControls() {
+            const select = document.getElementById('forecastTickerSelect');
+            if (!select) return;
+            const currentVal = select.value;
+            const yearSelect = document.getElementById('forecastYearSelect');
+            if (yearSelect && !yearSelect.options.length) {
+                const currentYear = new Date().getFullYear();
+                for (let year = currentYear; year <= currentYear + 5; year++) {
+                    const opt = document.createElement('option');
+                    opt.value = String(year); opt.textContent = String(year);
+                    yearSelect.appendChild(opt);
+                }
+                yearSelect.value = String(currentYear);
+            }
+            const topFilter = document.getElementById('indexFilter')?.value;
+            const symbols = [...new Set(observations.map(item => item.symbol.toUpperCase()))];
+
+            select.innerHTML = '';
+            symbols.forEach(sym => {
+                const opt = document.createElement('option');
+                opt.value = sym;
+                opt.textContent = sym;
+                opt.className = 'bg-slate-900';
+                select.appendChild(opt);
+            });
+
+            if (topFilter && topFilter !== 'ALL' && symbols.includes(topFilter)) {
+                select.value = topFilter;
+            } else if (currentVal && symbols.includes(currentVal)) {
+                select.value = currentVal;
+            } else if (symbols.includes('TORNTPOWER')) {
+                select.value = 'TORNTPOWER';
+            } else if (symbols.length > 0) {
+                select.value = symbols[0];
+            }
+        }
+
+        function getVolatilitySpreadPct(volRating, multiplier) {
+            const baseSpread = volRating === 'High' ? 18.0 : (volRating === 'Low' ? 4.5 : 9.5);
+            return baseSpread * (Number(multiplier) || 1);
+        }
+
+        function computeConvictionScore(winRate, avgReturn, volRating) {
+            const wr = Math.max(0, Math.min(100, Number(winRate) || 50));
+            const retComponent = Math.max(-25, Math.min(25, (Number(avgReturn) || 0) * 1.25));
+            const volPenalty = volRating === 'High' ? 14 : (volRating === 'Low' ? -4 : 3);
+            const raw = (wr * 0.65) + 22 + retComponent - volPenalty;
+            const score = Math.max(5, Math.min(96, Math.round(raw)));
+
+            let label = 'Mixed / Sideways Setup';
+            let badgeClass = 'bg-slate-800 text-slate-300 border-slate-700';
+            let barClass = 'bg-blue-500';
+
+            if (wr >= 70 && avgReturn > 1.5 && volRating !== 'High') {
+                label = 'High-Probability Bullish Seasonal Bias';
+                badgeClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40';
+                barClass = 'bg-emerald-500';
+            } else if (avgReturn > 5 && wr < 55) {
+                label = 'High-Dispersion / Outlier Swing Bias';
+                badgeClass = 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+                barClass = 'bg-amber-500';
+            } else if (wr <= 40 || avgReturn < -1.0) {
+                label = 'Bearish / Caution Seasonal Bias';
+                badgeClass = 'bg-rose-500/15 text-rose-300 border-rose-500/40';
+                barClass = 'bg-rose-500';
+            } else if (avgReturn > 0) {
+                label = 'Moderate Bullish Seasonal Bias';
+                badgeClass = 'bg-blue-500/15 text-blue-300 border-blue-500/40';
+                barClass = 'bg-blue-500';
+            }
+
+            return { score, label, badgeClass, barClass };
+        }
+
+        function renderForecastEngine() {
+            const host = document.getElementById('forecastOutputContainer');
+            const tickerSelect = document.getElementById('forecastTickerSelect');
+            const monthSelect = document.getElementById('forecastMonthSelect');
+            const yearSelect = document.getElementById('forecastYearSelect');
+            if (!host || !tickerSelect || !monthSelect) return;
+            const ticker = tickerSelect.value;
+            const targetMonth = monthSelect.value;
+            const targetYear = yearSelect ? yearSelect.value : String(new Date().getFullYear());
+            const multiplier = Number(document.getElementById('forecastVolMultiplier')?.value || 1);
+            const priceInputVal = parseFloat(document.getElementById('forecastCurrentPrice')?.value);
+            const hasPrice = Number.isFinite(priceInputVal) && priceInputVal > 0;
+
+            if (!ticker) {
+                host.innerHTML = `<div class="p-6 text-center text-slate-400 bg-slate-950/60 border border-slate-800 rounded-lg">No stock records available. Add a record from the left console to generate an outlook.</div>`;
+                return;
+            }
+            const tickerRecords = observations.filter(r => String(r.symbol || '').toUpperCase() === ticker);
+            const exactMonthRecords = tickerRecords.filter(r => r.month === targetMonth);
+            const usedFallback = exactMonthRecords.length === 0;
+            const sourceRecords = exactMonthRecords.length ? exactMonthRecords : tickerRecords;
+            if (!sourceRecords.length) {
+                host.innerHTML = `<div class="p-6 text-center text-slate-400 bg-slate-950/60 border border-slate-800 rounded-lg">No historical records are available for ${safeCell(ticker)}.</div>`;
+                return;
+            }
+
+            const n = sourceRecords.length;
+            const avgWinRate = sourceRecords.reduce((sum, r) => sum + (Number.isFinite(Number(r.winRate)) ? Number(r.winRate) : 50), 0) / n;
+            const avgReturn = sourceRecords.reduce((sum, r) => sum + (Number(r.avgReturn) || 0), 0) / n;
+            const volCounts = { Low: 0, Medium: 0, High: 0 };
+            sourceRecords.forEach(r => { const v = ['Low','Medium','High'].includes(r.volatility) ? r.volatility : 'Medium'; volCounts[v]++; });
+            const dominantVol = Object.entries(volCounts).sort((a,b) => b[1]-a[1])[0][0];
+
+            // Saved schema has no actual average winning/losing returns: this is a clearly labelled proxy.
+            const winProb = Math.max(0, Math.min(1, avgWinRate / 100));
+            const downsideProxy = Math.max(0.5, Math.abs(avgReturn) * 0.75, getVolatilitySpreadPct(dominantVol, 1) * 0.35);
+            const weightedExpectancyProxy = (winProb * Math.max(0, avgReturn)) - ((1 - winProb) * downsideProxy);
+            const spread = getVolatilitySpreadPct(dominantVol, multiplier);
+            const baseCasePct = (avgReturn * 0.65) + (weightedExpectancyProxy * 0.35);
+            const bullCasePct = baseCasePct + spread;
+            const bearCasePct = baseCasePct - spread;
+
+            // A record is not necessarily an independent year. Require a larger sample before strong labels.
+            const enoughForScore = !usedFallback && n >= 3;
+            const conviction = enoughForScore ? computeConvictionScore(avgWinRate, avgReturn, dominantVol) :
+                { score: null, label: 'INSUFFICIENT DATA', badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/40', barClass: 'bg-amber-500' };
+            const strongEvidence = !usedFallback && n >= 5 && conviction.score >= 75 && avgWinRate >= 65 && avgReturn > 0 && dominantVol !== 'High';
+            const signalType = usedFallback || n < 3 ? 'insufficient' :
+                (strongEvidence ? 'high' : (avgReturn < 0 || avgWinRate < 45 ? 'bearish' :
+                (avgReturn > 0 && avgWinRate >= 55 ? 'bullish' : 'caution')));
+            const signalLabel = signalType === 'high' ? 'STRONG BULLISH SETUP' :
+                signalType === 'bullish' ? 'BULLISH BIAS' :
+                signalType === 'bearish' ? 'BEARISH / CAUTION' :
+                signalType === 'insufficient' ? 'INSUFFICIENT DATA' : 'MIXED / CAUTION';
+            const notes = sourceRecords.map(r => r.notes).filter(Boolean).join(' • ') || 'No catalyst notes recorded yet.';
+            const fmtPct = v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+            const fmtTarget = pct => hasPrice ? formatINR(priceInputVal * (1 + pct / 100)) : 'Enter Current Price (₹)';
+            const warning = usedFallback
+                ? `No ${safeCell(targetMonth)}-specific records exist. Ticker-wide history is shown only as a rough reference, not a month-specific forecast.`
+                : n < 3
+                    ? `Only ${n} matching record(s). At least 3 are required to show a conviction score; at least 5 are required before a strong signal can be considered.`
+                    : n < 5
+                        ? `${n} matching records found. Sample remains limited; strong/high-confidence classification is disabled until 5 records exist.`
+                        : `${n} saved records found. These are research entries, not verified independent yearly observations.`;
+
+            host.innerHTML = `
+                <div class="bg-slate-950/70 border border-slate-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm font-bold text-slate-100 font-mono-num">${safeCell(ticker)}</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 font-semibold">${safeCell(targetMonth)} ${safeCell(targetYear)} Outlook</span>
+                            <span class="text-[11px] px-2.5 py-0.5 rounded-full border font-semibold ${conviction.badgeClass}">${signalLabel}</span>
+                        </div>
+                        <p class="text-xs text-slate-400">${usedFallback ? `Based on ${n} ticker-wide record(s), because no exact-month history is saved.` :
+                            `Based on <strong>${n}</strong> saved ${safeCell(targetMonth)} record(s) — Win Rate: <strong>${avgWinRate.toFixed(2)}%</strong>, Historical Avg Return: <strong>${fmtPct(avgReturn)}</strong>, Volatility: <strong>${safeCell(dominantVol)}</strong>.`}</p>
+                    </div>
+                    <div class="w-full md:w-56 shrink-0 bg-slate-900 border border-slate-800 rounded p-2.5">
+                        <div class="flex items-center justify-between text-[11px] mb-1"><span class="text-slate-400 font-semibold">Seasonal Conviction</span><span class="font-mono-num font-bold text-slate-100">${conviction.score === null ? '— / 100' : `${conviction.score} / 100`}</span></div>
+                        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div class="h-full ${conviction.barClass}" style="width:${conviction.score === null ? 0 : conviction.score}%"></div></div>
+                        <p class="text-[10px] text-slate-500 mt-1">Heuristic score, not probability of profit</p>
+                    </div>
+                </div>
+                <div class="rounded-lg border ${signalType === 'insufficient' ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-700 bg-slate-950/60'} p-3 text-xs">
+                    <div class="font-bold ${signalType === 'insufficient' ? 'text-amber-300' : 'text-slate-200'} mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${signalType === 'insufficient' ? 'Historical sample warning' : 'Signal quality & interpretation'}</div>
+                    <p class="text-slate-400">${warning}</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="bg-emerald-950/20 border border-emerald-500/30 rounded-lg p-3.5 space-y-1.5">
+                        <div class="flex items-center justify-between"><span class="text-[11px] uppercase font-bold text-emerald-400">Bullish Upside Scenario</span><i class="fa-solid fa-arrow-trend-up text-emerald-400"></i></div>
+                        <div class="text-xl font-bold font-mono-num text-emerald-400">${fmtPct(bullCasePct)}</div>
+                        <div class="text-xs text-slate-300 font-mono-num">Target: <strong>${fmtTarget(bullCasePct)}</strong></div>
+                        <p class="text-[11px] text-slate-400">Base (${fmtPct(baseCasePct)}) + volatility spread (+${spread.toFixed(2)}%)</p>
+                    </div>
+                    <div class="bg-blue-950/25 border border-blue-500/35 rounded-lg p-3.5 space-y-1.5">
+                        <div class="flex items-center justify-between"><span class="text-[11px] uppercase font-bold text-blue-300">Base Case Scenario</span><i class="fa-solid fa-scale-balanced text-blue-400"></i></div>
+                        <div class="text-xl font-bold font-mono-num ${baseCasePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fmtPct(baseCasePct)}</div>
+                        <div class="text-xs text-slate-300 font-mono-num">Projected: <strong>${fmtTarget(baseCasePct)}</strong></div>
+                        <p class="text-[11px] text-slate-400">Win-rate weighted proxy: ${fmtPct(weightedExpectancyProxy)}</p>
+                    </div>
+                    <div class="bg-rose-950/20 border border-rose-500/30 rounded-lg p-3.5 space-y-1.5">
+                        <div class="flex items-center justify-between"><span class="text-[11px] uppercase font-bold text-rose-400">Bearish Downside Risk</span><i class="fa-solid fa-arrow-trend-down text-rose-400"></i></div>
+                        <div class="text-xl font-bold font-mono-num ${bearCasePct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${fmtPct(bearCasePct)}</div>
+                        <div class="text-xs text-slate-300 font-mono-num">Risk zone: <strong>${fmtTarget(bearCasePct)}</strong></div>
+                        <p class="text-[11px] text-slate-400">Base (${fmtPct(baseCasePct)}) − volatility spread (-${spread.toFixed(2)}%)</p>
+                    </div>
+                </div>
+                <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3.5 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div><div class="text-[10px] uppercase font-bold text-slate-400 mb-1">Recorded Catalysts & Notes</div><p class="text-slate-300 break-words">${safeCell(notes)}</p></div>
+                    <div><div class="text-[10px] uppercase font-bold text-slate-400 mb-1">How to Read This Outlook</div><p class="text-slate-400">Seasonality describes historical tendencies, not guaranteed performance in ${safeCell(targetMonth)} ${safeCell(targetYear)}. The spread is illustrative, not a statistically calibrated confidence interval. Verify price and consider current market conditions, liquidity and risk controls.</p></div>
+                </div>
+                <div class="text-[10px] text-slate-500">Model note: saved records do not contain year-by-year returns or actual average winning/losing returns. Weighted expectancy is therefore a proxy, not true historical expectancy.</div>
+            `;
+            if (typeof activeTab === 'undefined' || activeTab === 'forecast') {
+                const signalKey = `${ticker}|${targetMonth}|${targetYear}|${signalLabel}`;
+                if (signalKey !== lastSignalKey) {
+                    playSignalSound(signalType);
+                    maybeNotifySignal(ticker, targetMonth, targetYear, signalLabel);
+                }
+            }
+        }
+
+        // TAB 2: Render Data Grid Table
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const sorted = [...data].sort((a, b) => MONTH_ORDER.indexOf(a.month) - MONTH_ORDER.indexOf(b.month));
+
+            sorted.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-colors border-b border-slate-800/40";
+
+                const isBullish = item.avgReturn >= 0;
+                const statusBadgeBg = isBullish ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+                
+                const volBadge = item.volatility === 'High' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : (item.volatility === 'Low' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-slate-800 text-slate-300 border-slate-700');
+
+                tr.innerHTML = `
+                    <td class="p-2.5 font-semibold text-slate-200">${item.month}</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-700 text-slate-200 font-mono-num font-bold text-[11px]">${item.symbol}</span></td>
+                    <td class="p-2.5">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] border ${statusBadgeBg}">
+                            ${item.status}
+                        </span>
+                    </td>
+                    <td class="p-2.5 font-mono-num text-slate-300 font-semibold">${item.winRate || 50}%</td>
+                    <td class="p-2.5 font-mono-num ${isBullish ? 'text-emerald-400' : 'text-rose-400'} font-bold">
+                        ${item.avgReturn > 0 ? '+' : ''}${item.avgReturn}%
+                    </td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] border ${volBadge}">${item.volatility || 'Medium'}</span></td>
+                    <td class="p-2.5 text-slate-400 text-xs max-w-xs truncate" title="${item.notes || '-'}">${item.notes || '-'}</td>
+                    <td class="p-2.5 text-right space-x-2">
+                        <button onclick="editObservation('${item.id}')" title="Edit" class="text-slate-400 hover:text-blue-400 p-1 transition-colors">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="deleteObservation('${item.id}')" title="Delete" class="text-slate-400 hover:text-rose-400 p-1 transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // TAB 3: Render Comparison Matrix
+        function renderMatrix() {
+            const tbody = document.getElementById('matrixTableBody');
+            tbody.innerHTML = '';
+
+            const symbols = [...new Set(observations.map(item => item.symbol.toUpperCase()))];
+
+            symbols.forEach(sym => {
+                const stockRecords = observations.filter(i => i.symbol.toUpperCase() === sym);
+                
+                let bestM = stockRecords[0];
+                let worstM = stockRecords[0];
+                let totalReturn = 0;
+                let totalWinRate = 0;
+                let weightedExpectancySum = 0;
+
+                stockRecords.forEach(r => {
+                    const ret = parseFloat(r.avgReturn) || 0;
+                    const wr = parseFloat(r.winRate ?? 50);
+                    if (ret > parseFloat(bestM.avgReturn)) bestM = r;
+                    if (ret < parseFloat(worstM.avgReturn)) worstM = r;
+                    totalReturn += ret;
+                    totalWinRate += wr;
+                    weightedExpectancySum += ((wr / 100) * Math.max(ret, 0)) + ((1 - wr / 100) * Math.min(ret, 0));
+                });
+
+                const avgWR = Math.round(totalWinRate / stockRecords.length);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-colors border-b border-slate-800/40";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-100 font-mono-num">${sym}</td>
+                    <td class="p-3 text-slate-400 font-mono-num">${stockRecords.length} Months Tracked</td>
+                    <td class="p-3 font-semibold text-emerald-400">${bestM ? bestM.month : '-'} (${bestM ? (bestM.avgReturn > 0 ? '+' : '') + bestM.avgReturn + '%' : '0%'})</td>
+                    <td class="p-3 font-semibold text-rose-400">${worstM ? worstM.month : '-'} (${worstM ? worstM.avgReturn + '%' : '0%'})</td>
+                    <td class="p-3 font-mono-num font-semibold text-blue-400">${avgWR}%</td>
+                    <td class="p-3 font-mono-num font-semibold ${weightedExpectancySum >= 0 ? 'text-cyan-300' : 'text-rose-400'}">${weightedExpectancySum > 0 ? '+' : ''}${weightedExpectancySum.toFixed(2)}%</td>
+                    <td class="p-3 font-mono-num font-bold ${totalReturn >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totalReturn > 0 ? '+' : ''}${totalReturn.toFixed(2)}% Net Sum</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Table Search Filter
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = getFilteredData().filter(item => 
+                item.symbol.toLowerCase().includes(query) || 
+                item.month.toLowerCase().includes(query) ||
+                (item.notes && item.notes.toLowerCase().includes(query))
+            );
+            renderTable(filtered);
+        }
+
+        // Form Submit Handler
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('editId').value;
+            const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+            const month = document.getElementById('month').value;
+            const status = document.getElementById('status').value;
+            const winRate = parseFloat(document.getElementById('winRate').value);
+            const avgReturn = parseFloat(document.getElementById('avgReturn').value);
+            const volatility = document.getElementById('volatility').value;
+            const notes = document.getElementById('notes').value.trim();
+
+            if (!symbol || !Number.isFinite(winRate) || winRate < 0 || winRate > 100 || !Number.isFinite(avgReturn)) {
+                playTone('error');
+                alert('Please enter a valid ticker, Win Rate (0–100), and numeric Average Return.');
+                return;
+            }
+
+            const safeWinRate = winRate;
+
+            if (editId) {
+                const index = observations.findIndex(item => item.id === editId);
+                if (index !== -1) {
+                    observations[index] = { id: editId, symbol, month, status, winRate: safeWinRate, avgReturn, volatility, notes };
+                }
+            } else {
+                observations.push({
+                    id: Date.now().toString(),
+                    symbol,
+                    month,
+                    status,
+                    winRate: safeWinRate,
+                    avgReturn,
+                    volatility,
+                    notes
+                });
+            }
+
+            saveToLocalStorage();
+            playTone('save');
+            const saveButton = document.getElementById('submitBtn');
+            if (saveButton) {
+                const priorText = saveButton.innerHTML;
+                saveButton.innerHTML = '<i class="fa-solid fa-check"></i> Saved locally';
+                setTimeout(() => { if (saveButton.isConnected) saveButton.innerHTML = priorText; }, 1100);
+            }
+            populateIndexFilter();
+            renderDashboard();
+            resetForm();
+        }
+
+        function editObservation(id) {
+            const item = observations.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('editId').value = item.id;
+            document.getElementById('symbol').value = item.symbol;
+            document.getElementById('month').value = item.month;
+            document.getElementById('status').value = item.status;
+            document.getElementById('winRate').value = item.winRate ?? 50;
+            document.getElementById('avgReturn').value = item.avgReturn;
+            document.getElementById('volatility').value = item.volatility || 'Medium';
+            document.getElementById('notes').value = item.notes || '';
+
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-blue-400"></i> Edit Record`;
+            document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-check"></i> Update Record`;
+            document.getElementById('cancelBtn').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteObservation(id) {
+            if (confirm("Delete this research entry?")) {
+                observations = observations.filter(item => item.id !== id);
+                saveToLocalStorage();
+                populateIndexFilter();
+                renderDashboard();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('editId').value = '';
+            document.getElementById('observationForm').reset();
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-square-plus text-blue-400"></i> Research Input Console`;
+            document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-database"></i> Commit Record`;
+            document.getElementById('cancelBtn').classList.add('hidden');
+        }
+
+        // Export Data Grid to CSV
+        function exportToCSV() {
+            const filtered = getFilteredData();
+            if (filtered.length === 0) {
+                alert("No research data available to export.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Symbol,Month,Status,WinRatePercent,AvgReturnPercent,Volatility,Notes\n";
+
+            filtered.forEach(row => {
+                const cleanNotes = (row.notes || '').replace(/,/g, ' ');
+                csvContent += `${row.symbol},${row.month},${row.status},${row.winRate || 50},${row.avgReturn},${row.volatility || 'Medium'},${cleanNotes}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Seasonality_Research_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Export Backup JSON
+        function exportJSONBackup() {
+            const backupData = { backupVersion: 3, observations, shareInvestments, companyMemory };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const link = document.createElement("a");
+            link.setAttribute("href", dataStr);
+            link.setAttribute("download", `ProStock_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Restore research data from a previously downloaded JSON backup.
+        // The current data is preserved unless the user confirms replacement.
+        async function restoreJSONBackup(event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+
+                // Accept the original backup format (array of observations).
+                // Also support a wrapped format for future compatibility.
+                const imported = Array.isArray(parsed)
+                    ? parsed
+                    : (parsed && Array.isArray(parsed.observations) ? parsed.observations : null);
+
+                if (!imported || imported.length === 0) {
+                    throw new Error("Backup file does not contain a valid, non-empty records array.");
+                }
+
+                const valid = imported.every(row =>
+                    row && typeof row === 'object' && !Array.isArray(row) &&
+                    typeof row.symbol === 'string' && row.symbol.trim() &&
+                    typeof row.month === 'string' && row.month.trim() &&
+                    typeof row.status === 'string' &&
+                    row.avgReturn !== undefined && row.avgReturn !== null &&
+                    Number.isFinite(Number(row.avgReturn))
+                );
+
+                if (!valid) {
+                    throw new Error("Some records are missing required fields or contain invalid values.");
+                }
+
+                const normalized = imported.map(row => ({
+                    ...row,
+                    symbol: row.symbol.trim().toUpperCase(),
+                    month: row.month.trim(),
+                    winRate: row.winRate === undefined || row.winRate === null || row.winRate === ''
+                        ? 50 : Number(row.winRate),
+                    avgReturn: Number(row.avgReturn),
+                    volatility: row.volatility || 'Medium',
+                    notes: row.notes || ''
+                }));
+
+                const confirmed = confirm(
+                    `Restore ${normalized.length} records from "${file.name}"?\\n\\n` +
+                    `This will replace the current ${observations.length} records.\\n` +
+                    `Tip: click Backup first if you want to keep the current data.`
+                );
+                if (!confirmed) return;
+
+                observations = normalized;
+                saveToLocalStorage();
+                if (!Array.isArray(parsed) && Array.isArray(parsed.shareInvestments)) {
+                    shareInvestments = parsed.shareInvestments.filter(row => row && typeof row.person === 'string' && typeof row.company === 'string' && Number.isFinite(Number(row.quantity)) && Number.isFinite(Number(row.price))).map(row => ({...row, quantity:Number(row.quantity), price:Number(row.price)}));
+                    saveInvestments();
+                    renderInvestments();
+                }
+                if (!Array.isArray(parsed) && Array.isArray(parsed.companyMemory)) {
+                    companyMemory = parsed.companyMemory.filter(row => row && typeof row.name === 'string' && row.name.trim()).map(row => ({id:String(row.id || Date.now()+Math.random()), name:String(row.name).slice(0,100), symbol:String(row.symbol||''), sector:String(row.sector||''), tag:String(row.tag||'To Research'), notes:String(row.notes||''), logo:typeof row.logo==='string'?row.logo:''}));
+                    saveCompanyMemoryData(); renderCompanyMemory();
+                }
+                populateIndexFilter();
+                renderDashboard();
+                alert(`Restore successful! ${observations.length} records loaded.`);
+            } catch (error) {
+                alert("Restore failed: " + (error.message || "Invalid JSON backup file."));
+            } finally {
+                input.value = '';
+            }
+        }
+
+        // Share Investment Notepad: independent storage keeps seasonality records untouched.
+        function loadInvestments() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('prostock_share_investments') || '[]');
+                shareInvestments = Array.isArray(saved) ? saved : [];
+            } catch (e) { shareInvestments = []; }
+            renderInvestments();
+        }
+        function saveInvestments() {
+            localStorage.setItem('prostock_share_investments', JSON.stringify(shareInvestments));
+        }
+        function loadPersonPhotos() {
+            try { return JSON.parse(localStorage.getItem('prostock_person_photos') || '{}') || {}; }
+            catch (e) { return {}; }
+        }
+        let personPhotos = loadPersonPhotos();
+        function personPhotoKey(name) { return String(name || '').trim().toLocaleLowerCase(); }
+        function previewPersonPhoto(event) {
+            const file = event.target.files && event.target.files[0];
+            const preview = document.getElementById('invPersonPhotoPreview');
+            if (!file) { preview.classList.add('hidden'); return; }
+            if (!file.type.startsWith('image/')) { alert('Please select an image file.'); event.target.value=''; return; }
+            const reader = new FileReader();
+            reader.onload = () => { preview.src = reader.result; preview.classList.remove('hidden'); };
+            reader.onerror = () => alert('Could not read this image. Please try another file.');
+            reader.readAsDataURL(file);
+        }
+        function compressPersonPhoto(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('Could not read person photo.'));
+                reader.onload = () => {
+                    const image = new Image();
+                    image.onerror = () => reject(new Error('Invalid image file.'));
+                    image.onload = () => {
+                        const max = 320, scale = Math.min(1, max / Math.max(image.width, image.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, Math.round(image.width * scale));
+                        canvas.height = Math.max(1, Math.round(image.height * scale));
+                        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.78));
+                    };
+                    image.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        function formatINR(value) {
+            return '₹' + Number(value || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        }
+        function safeCell(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        }
+        async function addInvestment(event) {
+            event.preventDefault();
+            const person = document.getElementById('invPerson').value.trim();
+            const company = document.getElementById('invCompany').value.trim();
+            const quantity = Number(document.getElementById('invQty').value);
+            const price = Number(document.getElementById('invPrice').value);
+            if (!person || !company || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(price) || price < 0) {
+                alert('Please enter valid person, company, share quantity and buy price.'); return;
+            }
+            const photoFile = document.getElementById('invPersonPhoto').files[0];
+            if (photoFile) {
+                try {
+                    personPhotos[personPhotoKey(person)] = await compressPersonPhoto(photoFile);
+                    localStorage.setItem('prostock_person_photos', JSON.stringify(personPhotos));
+                } catch (error) { alert(error.message || 'Photo could not be saved.'); return; }
+            }
+            shareInvestments.push({id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()), person, company, quantity, price, date: document.getElementById('invDate').value || new Date().toISOString().slice(0,10), notes: document.getElementById('invNotes').value.trim()});
+            saveInvestments();
+            event.target.reset();
+            document.getElementById('invPersonPhotoPreview').classList.add('hidden');
+            renderInvestments();
+        }
+        function editInvestment(id) {
+            const row = shareInvestments.find(item => item.id === id); if (!row) return;
+            const person = prompt('Person name:', row.person); if (person === null) return;
+            const company = prompt('Company / share name:', row.company); if (company === null) return;
+            const quantity = prompt('Share quantity:', row.quantity); if (quantity === null) return;
+            const price = prompt('Buy price per share (₹):', row.price); if (price === null) return;
+            const date = prompt('Purchase date (YYYY-MM-DD):', row.date || ''); if (date === null) return;
+            const notes = prompt('Notes:', row.notes || ''); if (notes === null) return;
+            if (!person.trim() || !company.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0 || !Number.isFinite(Number(price)) || Number(price) < 0) { alert('Invalid entry. No changes saved.'); return; }
+            Object.assign(row, {person:person.trim(), company:company.trim(), quantity:Number(quantity), price:Number(price), date:date.trim(), notes:notes.trim()});
+            saveInvestments(); renderInvestments();
+        }
+        function deleteInvestment(id) {
+            if (!confirm('Delete this investment entry?')) return;
+            shareInvestments = shareInvestments.filter(item => item.id !== id);
+            saveInvestments(); renderInvestments();
+        }
+        function renderInvestments() {
+            const body = document.getElementById('investmentTableBody'); if (!body) return;
+            const query = (document.getElementById('investmentSearch')?.value || '').toLowerCase().trim();
+            const filtered = shareInvestments.filter(row => `${row.person} ${row.company} ${row.notes || ''}`.toLowerCase().includes(query));
+            const totalShares = shareInvestments.reduce((sum,row) => sum + Number(row.quantity || 0), 0);
+            const totalMoney = shareInvestments.reduce((sum,row) => sum + Number(row.quantity || 0) * Number(row.price || 0), 0);
+            document.getElementById('investmentCount').textContent = shareInvestments.length;
+            document.getElementById('investmentShares').textContent = totalShares.toLocaleString('en-IN');
+            document.getElementById('investmentTotal').textContent = formatINR(totalMoney);
+            if (!filtered.length) { body.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500">${shareInvestments.length ? 'No matching entries.' : 'No entries yet. Add your first share record above.'}</td></tr>`; return; }
+            body.innerHTML = filtered.map(row => { const photo=personPhotos[personPhotoKey(row.person)]; const avatar=photo ? `<img src="${photo}" alt="" class="h-8 w-8 rounded-full object-cover border border-slate-600 inline-block mr-2 align-middle">` : `<span class="h-8 w-8 rounded-full bg-slate-700 inline-flex items-center justify-center text-[10px] text-slate-300 mr-2 align-middle"><i class="fa-solid fa-user"></i></span>`; return `<tr class="hover:bg-slate-800/60"><td class="p-3 font-semibold text-slate-200 whitespace-nowrap">${avatar}${safeCell(row.person)}</td><td class="p-3 text-slate-200">${safeCell(row.company)}</td><td class="p-3 text-right font-mono-num">${Number(row.quantity).toLocaleString('en-IN')}</td><td class="p-3 text-right font-mono-num">${formatINR(row.price)}</td><td class="p-3 text-right font-mono-num font-semibold text-emerald-400">${formatINR(Number(row.quantity)*Number(row.price))}</td><td class="p-3">${safeCell(row.date || '')}</td><td class="p-3 max-w-[180px] truncate" title="${safeCell(row.notes || '')}">${safeCell(row.notes || '')}</td><td class="p-3 whitespace-nowrap"><button onclick="editInvestment('${safeCell(row.id)}')" class="text-blue-400 hover:text-blue-300 mr-3" title="Edit"><i class="fa-solid fa-pen"></i></button><button onclick="deleteInvestment('${safeCell(row.id)}')" class="text-rose-400 hover:text-rose-300" title="Delete"><i class="fa-solid fa-trash"></i></button></td></tr>`; }).join('');
+        }
+        function exportInvestmentsCSV() {
+            const rows = [['Person Name','Company','Share Quantity','Buy Price','Total Investment','Purchase Date','Notes'], ...shareInvestments.map(row => [row.person,row.company,row.quantity,row.price,(Number(row.quantity)*Number(row.price)).toFixed(2),row.date || '',row.notes || ''])];
+            const csv = rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g,'""') + '"').join(',')).join('\r\n');
+            const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob); const link = document.createElement('a');
+            link.href = url; link.download = `Share_Investment_Notepad_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+        }
+
+        // Screenshot OCR Analyzer: OCR is performed locally in the browser (no API key).
+        let marketScreenshotFile = null;
+        // Built-in calculator state and controls (kept separate from investment data).
+        let calcCurrent = '0';
+        let calcStored = null;
+        let calcOperator = null;
+        let calcWaitingForOperand = false;
+        let calcExpressionText = '';
+        function updateCalculatorDisplay() {
+            const display=document.getElementById('calcDisplay');
+            const expression=document.getElementById('calcExpression');
+            if(display) display.value=calcCurrent;
+            if(expression) expression.textContent=calcExpressionText;
+        }
+        function calculatorAction(action, value) {
+            if(action==='clear') { calcCurrent='0'; calcStored=null; calcOperator=null; calcWaitingForOperand=false; calcExpressionText=''; }
+            else if(action==='digit') {
+                if(calcWaitingForOperand) { calcCurrent=value; calcWaitingForOperand=false; }
+                else calcCurrent=calcCurrent==='0'?value:calcCurrent+value;
+                if(calcCurrent.length>16) calcCurrent=calcCurrent.slice(0,16);
+            } else if(action==='decimal') {
+                if(calcWaitingForOperand) { calcCurrent='0.'; calcWaitingForOperand=false; }
+                else if(!calcCurrent.includes('.')) calcCurrent+='.';
+            } else if(action==='backspace') {
+                if(calcWaitingForOperand) return;
+                calcCurrent=calcCurrent.length>1?calcCurrent.slice(0,-1):'0';
+                if(calcCurrent==='-') calcCurrent='0';
+            } else if(action==='sign') {
+                if(Number(calcCurrent)!==0) calcCurrent=String(-Number(calcCurrent));
+            } else if(action==='percent') {
+                calcCurrent=String(Number(calcCurrent)/100); calcWaitingForOperand=true;
+            } else if(action==='operator') {
+                const input=Number(calcCurrent);
+                if(calcOperator && !calcWaitingForOperand) {
+                    const result=performCalcOperation(calcStored,input,calcOperator);
+                    if(!Number.isFinite(result)) { calcCurrent='Error'; calcStored=null; calcOperator=null; calcWaitingForOperand=true; updateCalculatorDisplay(); return; }
+                    calcCurrent=String(Number(result.toPrecision(12)));
+                }
+                calcStored=Number(calcCurrent); calcOperator=value; calcWaitingForOperand=true;
+                calcExpressionText=String(calcStored)+' '+value;
+            } else if(action==='equals') {
+                if(calcOperator===null || calcStored===null) return;
+                const left=calcStored, right=Number(calcCurrent), op=calcOperator;
+                const result=performCalcOperation(left,right,op);
+                calcExpressionText=left+' '+op+' '+right+' =';
+                calcCurrent=Number.isFinite(result)?String(Number(result.toPrecision(12))):'Error';
+                calcStored=null; calcOperator=null; calcWaitingForOperand=true;
+            }
+            updateCalculatorDisplay();
+        }
+        function performCalcOperation(a,b,op) {
+            if(op==='+') return a+b;
+            if(op==='−') return a-b;
+            if(op==='×') return a*b;
+            if(op==='÷') return b===0?NaN:a/b;
+            return b;
+        }
+        document.addEventListener('keydown', function(e) {
+            if(!document.getElementById('tabContentCalculator') || document.getElementById('tabContentCalculator').classList.contains('hidden')) return;
+            if(/^[0-9]$/.test(e.key)) calculatorAction('digit',e.key);
+            else if(e.key==='.') calculatorAction('decimal');
+            else if(e.key==='Enter' || e.key==='=') { e.preventDefault(); calculatorAction('equals'); }
+            else if(e.key==='Backspace') calculatorAction('backspace');
+            else if(e.key==='Escape') calculatorAction('clear');
+            else if(e.key==='+') calculatorAction('operator','+');
+            else if(e.key==='-') calculatorAction('operator','−');
+            else if(e.key==='*') calculatorAction('operator','×');
+            else if(e.key==='/') { e.preventDefault(); calculatorAction('operator','÷'); }
+            else if(e.key==='%') calculatorAction('percent');
+        });
+
+        let lastCalculatedHolding = null;
+        let lastCalculatedPrice = null;
+        function previewMarketScreenshot(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) { alert('Please select an image file.'); return; }
+            marketScreenshotFile = file;
+            const img = document.getElementById('marketScreenshotPreview');
+            img.src = URL.createObjectURL(file); img.classList.remove('hidden');
+            document.getElementById('ocrStatus').textContent = 'Screenshot ready. Click Read Screenshot (OCR).';
+            document.getElementById('ocrProgress').style.width = '0%';
+        }
+        // Company Memory Notepad: independent local storage, included in JSON backup.
+        function loadCompanyMemory() {
+            try { const saved=JSON.parse(localStorage.getItem('prostock_company_memory')||'[]'); companyMemory=Array.isArray(saved)?saved:[]; }
+            catch(e) { companyMemory=[]; }
+            renderCompanyMemory();
+        }
+        function saveCompanyMemoryData() {
+            try { localStorage.setItem('prostock_company_memory',JSON.stringify(companyMemory)); }
+            catch(e) { alert('Browser storage is full. Please use a smaller logo image or remove unused entries.'); }
+        }
+        function handleCompanyLogo(event) {
+            const file=event.target.files && event.target.files[0]; if(!file) return;
+            if(!file.type.startsWith('image/')) { alert('Please choose an image file.'); event.target.value=''; return; }
+            const reader=new FileReader();
+            reader.onload=()=>{
+                const img=new Image(); img.onload=()=>{
+                    const canvas=document.createElement('canvas'); const scale=Math.min(1,320/Math.max(img.width,img.height));
+                    canvas.width=Math.max(1,Math.round(img.width*scale)); canvas.height=Math.max(1,Math.round(img.height*scale));
+                    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+                    companyMemoryLogoData=canvas.toDataURL('image/jpeg',0.78);
+                    const preview=document.getElementById('cmLogoPreview'); preview.src=companyMemoryLogoData; preview.classList.remove('hidden');
+                }; img.onerror=()=>alert('Could not read this image.'); img.src=reader.result;
+            }; reader.readAsDataURL(file);
+        }
+        function saveCompanyMemory(event) {
+            event.preventDefault();
+            const name=document.getElementById('cmName').value.trim(); if(!name) return;
+            const old=companyMemory.find(x=>x.id===companyMemoryEditId);
+            const row={id:companyMemoryEditId||('cm_'+Date.now()),name,symbol:document.getElementById('cmSymbol').value.trim().toUpperCase(),sector:document.getElementById('cmSector').value.trim(),tag:document.getElementById('cmTag').value,notes:document.getElementById('cmNotes').value.trim(),logo:companyMemoryLogoData||(old&&old.logo)||''};
+            if(companyMemoryEditId) companyMemory=companyMemory.map(x=>x.id===companyMemoryEditId?row:x); else companyMemory.unshift(row);
+            saveCompanyMemoryData(); resetCompanyMemoryForm(); renderCompanyMemory();
+        }
+        function resetCompanyMemoryForm() {
+            companyMemoryEditId=null; companyMemoryLogoData='';
+            ['cmName','cmSymbol','cmSector','cmNotes','cmLogo'].forEach(id=>document.getElementById(id).value='');
+            document.getElementById('cmTag').value='To Research';
+            const preview=document.getElementById('cmLogoPreview'); preview.removeAttribute('src'); preview.classList.add('hidden');
+            document.getElementById('cmSaveBtn').innerHTML='<i class="fa-solid fa-floppy-disk mr-1"></i> Save Company';
+        }
+        function editCompanyMemory(id) {
+            const x=companyMemory.find(r=>r.id===id); if(!x) return;
+            companyMemoryEditId=id; companyMemoryLogoData='';
+            document.getElementById('cmName').value=x.name||''; document.getElementById('cmSymbol').value=x.symbol||'';
+            document.getElementById('cmSector').value=x.sector||''; document.getElementById('cmTag').value=x.tag||'To Research';
+            document.getElementById('cmNotes').value=x.notes||'';
+            const preview=document.getElementById('cmLogoPreview'); if(x.logo){preview.src=x.logo;preview.classList.remove('hidden');}else{preview.removeAttribute('src');preview.classList.add('hidden');}
+            document.getElementById('cmSaveBtn').innerHTML='<i class="fa-solid fa-check mr-1"></i> Update Company';
+            document.getElementById('cmName').focus();
+        }
+        function deleteCompanyMemory(id) {
+            if(!confirm('Delete this saved company from Company Memory?')) return;
+            companyMemory=companyMemory.filter(x=>x.id!==id); saveCompanyMemoryData(); renderCompanyMemory();
+            if(companyMemoryEditId===id) resetCompanyMemoryForm();
+        }
+        function escapeCompanyText(value) { return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function renderCompanyMemory() {
+            const host=document.getElementById('companyMemoryList'); if(!host) return;
+            const q=(document.getElementById('companyMemorySearch')?.value||'').toLowerCase();
+            const rows=companyMemory.filter(x=>[x.name,x.symbol,x.sector,x.tag,x.notes].join(' ').toLowerCase().includes(q));
+            document.getElementById('cmCount').textContent=`${companyMemory.length} compan${companyMemory.length===1?'y':'ies'} saved`;
+            if(!rows.length){host.innerHTML='<div class="md:col-span-2 text-center text-xs text-slate-500 border border-dashed border-slate-700 rounded p-8">No companies saved yet. Add a company name, optional logo and your notes above.</div>';return;}
+            host.innerHTML=rows.map(x=>`<article class="bg-slate-950/70 border border-slate-800 rounded-lg p-3 flex gap-3 min-w-0">
+                <div class="h-14 w-14 shrink-0 rounded-lg bg-white/10 border border-slate-700 flex items-center justify-center overflow-hidden">${x.logo?`<img src="${x.logo}" alt="" class="w-full h-full object-contain bg-white p-1">`:'<i class="fa-solid fa-building text-2xl text-slate-500"></i>'}</div>
+                <div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><strong class="text-sm text-slate-100">${escapeCompanyText(x.name)}</strong><span class="text-[10px] rounded px-2 py-0.5 bg-blue-950 text-blue-300">${escapeCompanyText(x.tag||'To Research')}</span></div>
+                <div class="text-[11px] text-slate-400 mt-1">${escapeCompanyText(x.symbol||'No symbol')}${x.sector?' · '+escapeCompanyText(x.sector):''}</div>
+                ${x.notes?`<p class="text-xs text-slate-300 mt-2 whitespace-pre-wrap break-words">${escapeCompanyText(x.notes)}</p>`:''}
+                <div class="flex gap-3 mt-3"><button onclick="editCompanyMemory('${String(x.id).replace(/'/g,'')}')" class="text-[11px] text-blue-400 hover:text-blue-300"><i class="fa-solid fa-pen mr-1"></i>Edit</button><button onclick="deleteCompanyMemory('${String(x.id).replace(/'/g,'')}')" class="text-[11px] text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash mr-1"></i>Delete</button></div></div></article>`).join('');
+        }
+        document.addEventListener('DOMContentLoaded',()=>{ const logo=document.getElementById('cmLogo'); if(logo) logo.addEventListener('change',handleCompanyLogo); });
+
+        function loadTesseract() {
+            return new Promise((resolve, reject) => {
+                if (window.Tesseract) return resolve(window.Tesseract);
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                script.onload = () => window.Tesseract ? resolve(window.Tesseract) : reject(new Error('OCR engine could not load.'));
+                script.onerror = () => reject(new Error('Could not download OCR engine. Check your internet connection and try again.'));
+                document.head.appendChild(script);
+            });
+        }
+        async function runMarketOCR() {
+            if (!marketScreenshotFile) { alert('Please upload a market screenshot first.'); return; }
+            const button = document.getElementById('runOcrButton');
+            const status = document.getElementById('ocrStatus');
+            button.disabled = true; button.classList.add('opacity-50');
+            status.textContent = 'Loading browser OCR engine...';
+            try {
+                const Tesseract = await loadTesseract();
+                status.textContent = 'Reading screenshot locally...';
+                const result = await Tesseract.recognize(marketScreenshotFile, 'eng', {
+                    logger: message => {
+                        if (message.status) status.textContent = 'OCR: ' + message.status;
+                        if (typeof message.progress === 'number') document.getElementById('ocrProgress').style.width = Math.round(message.progress * 100) + '%';
+                    }
+                });
+                const text = result.data.text || '';
+                document.getElementById('ocrRawText').value = text;
+                const candidates = text.match(/(?:₹|Rs\.?\s*)? \d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})? /g) || [];
+                const numbers = candidates.map(v => Number(v.replace(/[^\d.]/g,''))).filter(v => Number.isFinite(v) && v > 0 && v < 10000000);
+                // Conservative auto-fill: only prefill a price if the screenshot clearly contains LTP/Last Price/Price.
+                const lines = text.split(/\r?\n/);
+                let detected = null;
+                for (let i=0;i<lines.length;i++) {
+                    if (/\b(LTP|LAST PRICE|CURRENT PRICE|PRICE)\b/i.test(lines[i])) {
+                        const vals = lines[i].match(/\d[\d,]*(?:\.\d{1,2})?/g) || [];
+                        const n = vals.map(v=>Number(v.replace(/,/g,''))).find(v=>Number.isFinite(v)&&v>0&&v<10000000);
+                        if (n) { detected=n; break; }
+                        const next = (lines[i+1] || '').match(/\d[\d,]*(?:\.\d{1,2})?/);
+                        if (next) { const v=Number(next[0].replace(/,/g,'')); if(v>0) {detected=v;break;} }
+                    }
+                }
+                if (detected) document.getElementById('ocrPrice').value = detected;
+                status.textContent = `OCR complete. ${numbers.length} numeric values detected. Verify company and current price manually.`;
+                refreshAnalyzerHoldings();
+            } catch (error) {
+                status.textContent = error.message || 'OCR failed. Please try a clearer screenshot.';
+            } finally { button.disabled = false; button.classList.remove('opacity-50'); }
+        }
+        function refreshAnalyzerHoldings() {
+            const select = document.getElementById('ocrHoldingSelect'); if (!select) return;
+            const current = select.value;
+            const groups = new Map();
+            shareInvestments.forEach(row => {
+                const key = row.person + '||' + row.company;
+                if (!groups.has(key)) groups.set(key, {person:row.person,company:row.company,quantity:0,cost:0});
+                const g=groups.get(key); g.quantity += Number(row.quantity)||0; g.cost += (Number(row.quantity)||0)*(Number(row.price)||0);
+            });
+            select.innerHTML = '<option value="">Select saved person / company holding</option>';
+            groups.forEach((g,key) => { const opt=document.createElement('option'); opt.value=key; opt.textContent=`${g.person} — ${g.company}`; select.appendChild(opt); });
+            if ([...select.options].some(o=>o.value===current)) select.value=current;
+            const dl=document.getElementById('ocrCompanyOptions');
+            if (dl) dl.innerHTML=[...new Set(shareInvestments.map(r=>r.company))].map(c=>`<option value="${safeCell(c)}"></option>`).join('');
+        }
+        function fillAnalyzerCompany() {
+            const key=document.getElementById('ocrHoldingSelect').value;
+            const profile=document.getElementById('ocrPersonProfile');
+            if (!key) { profile.classList.add('hidden'); return; }
+            const parts=key.split('||'); const person=parts[0]; const company=parts.slice(1).join('||');
+            document.getElementById('ocrCompany').value=company;
+            document.getElementById('ocrPersonName').textContent=person;
+            document.getElementById('ocrPersonCompany').textContent=company;
+            const photo=personPhotos[personPhotoKey(person)];
+            const image=document.getElementById('ocrPersonPhoto');
+            if (photo) { image.src=photo; image.classList.remove('hidden'); }
+            else { image.removeAttribute('src'); image.classList.add('hidden'); }
+            profile.classList.remove('hidden');
+        }
+        function calculateScreenshotPortfolio() {
+            const key=document.getElementById('ocrHoldingSelect').value;
+            const price=Number(document.getElementById('ocrPrice').value);
+            if (!key) { alert('Select a saved person/company holding.'); return; }
+            if (!Number.isFinite(price)||price<=0) { alert('Enter and verify a valid current price read from the screenshot.'); return; }
+            const [person,...companyParts]=key.split('||'); const company=companyParts.join('||');
+            const rows=shareInvestments.filter(r=>r.person===person&&r.company===company);
+            const quantity=rows.reduce((sum,r)=>sum+(Number(r.quantity)||0),0);
+            const investment=rows.reduce((sum,r)=>sum+(Number(r.quantity)||0)*(Number(r.price)||0),0);
+            const currentValue=quantity*price; const pnl=currentValue-investment; const pct=investment?100*pnl/investment:0;
+            lastCalculatedHolding={person,company,quantity,investment}; lastCalculatedPrice=price;
+            lastCalculatedReport={person,company,quantity,buyPrice:quantity?investment/quantity:0,investment,currentPrice:price,currentValue,pnl,returnPct:pct,calculatedAt:new Date().toISOString()};
+            fillAnalyzerCompany();
+            const vals=[quantity.toLocaleString('en-IN'),formatINR(investment),formatINR(currentValue),formatINR(pnl),(pct>=0?'+':'')+pct.toFixed(2)+'%'];
+            const colors=['text-slate-100','text-slate-100','text-slate-100',pnl>=0?'text-emerald-400':'text-rose-400',pnl>=0?'text-emerald-400':'text-rose-400'];
+            const labels=['Shares','Investment','Current Value','Unrealized P/L','Return'];
+            document.getElementById('ocrCalculation').innerHTML=vals.map((v,i)=>`<div class="bg-slate-900 rounded p-3"><div class="text-[10px] text-slate-400">${labels[i]}</div><div class="text-sm font-bold ${colors[i]}">${v}</div></div>`).join('');
+            document.getElementById('ocrSavedStatus').textContent='Calculation ready. Verify screenshot values before saving.';
+        }
+        let lastCalculatedReport = null;
+        function exportScreenshotProfitLossCSV() {
+            if (!lastCalculatedReport) { alert('Please calculate the portfolio first, then export the P/L report.'); return; }
+            const r = lastCalculatedReport;
+            const rows = [
+                ['StockTrend IQ - Screenshot Analyzer Profit & Loss Report'],
+                ['Person Name','Company / Symbol','Share Quantity','Average Buy Price (INR)','Total Investment (INR)','Current Price (INR)','Current Market Value (INR)','Unrealized Profit/Loss (INR)','Return (%)','Calculation Date & Time'],
+                [r.person,r.company,r.quantity,r.buyPrice.toFixed(2),r.investment.toFixed(2),r.currentPrice.toFixed(2),r.currentValue.toFixed(2),r.pnl.toFixed(2),r.returnPct.toFixed(2),new Date(r.calculatedAt).toLocaleString('en-IN')]
+            ];
+            const csv = rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g,'""') + '"').join(',')).join('\r\n');
+            const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob); const link = document.createElement('a');
+            link.href = url; link.download = `Screenshot_Analyzer_PL_Report_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+            document.getElementById('ocrSavedStatus').textContent = 'P/L report exported. Open the CSV file in Excel.';
+        }
+        function saveScreenshotPrice() {
+            if (!lastCalculatedHolding || !lastCalculatedPrice) { alert('Calculate the portfolio first.'); return; }
+            const prices=JSON.parse(localStorage.getItem('prostock_screenshot_prices')||'{}');
+            const key=lastCalculatedHolding.person+'||'+lastCalculatedHolding.company;
+            prices[key]={price:lastCalculatedPrice,updatedAt:new Date().toISOString(),source:'User-verified screenshot OCR'};
+            localStorage.setItem('prostock_screenshot_prices',JSON.stringify(prices));
+            document.getElementById('ocrSavedStatus').textContent='Verified price saved in this browser on this device.';
+        }
+    </script>
+</body>
+</html>
